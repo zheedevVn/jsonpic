@@ -215,9 +215,12 @@ module.exports = async function handler(req, res) {
           const cleanManga = mangaName.trim();
           const cleanChap = chapter ? chapter.trim() : "";
           const folderPrefix = cleanChap ? `${cleanManga}/${cleanChap}` : cleanManga;
-          targetPath = `upload/${folderPrefix}/${rawPath}`;
-        } else {
+          const fileNameOnly = rawPath.split("/").pop();
+          targetPath = `upload/${folderPrefix}/${fileNameOnly}`;
+        } else if (rawPath.includes("/")) {
           targetPath = `upload/${rawPath}`;
+        } else {
+          throw new Error("Lỗi bảo vệ dữ liệu: Bắt buộc phải có Tên Bộ Truyện để lưu ảnh đúng cấu trúc: http://cdnjsonhentai.netlify.app/upload/{tên truyện}/từng ảnh 1. Tuyệt đối không dồn ảnh vào gốc!");
         }
 
         return {
