@@ -199,11 +199,17 @@ module.exports = async function handler(req, res) {
     ).filter(Boolean);
 
     try {
-      // Chuẩn bị đường dẫn file (ví dụ: manga-name/chap-1/01.jpg)
+      // Chuẩn bị đường dẫn file (hỗ trợ cả đường dẫn thư mục con)
       const prefix = [mangaName, chapter].filter(Boolean).map(s => s.trim().replace(/[^a-zA-Z0-9_\-\.]/g, "_")).join("/");
       const formattedFiles = files.map(file => {
-        const filename = file.name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
-        const relPath = prefix ? `${prefix}/${filename}` : filename;
+        const rawPath = file.relativePath || file.name;
+        const cleanPath = rawPath
+          .split("/")
+          .map(part => part.trim().replace(/[^a-zA-Z0-9_\-\.]/g, "_"))
+          .filter(Boolean)
+          .join("/");
+
+        const relPath = prefix ? `${prefix}/${cleanPath}` : cleanPath;
         return {
           name: relPath,
           data: Buffer.from(file.base64, "base64")
