@@ -70,10 +70,6 @@ module.exports = async function handler(req, res) {
           cluster: "Vercel Edge / Serverless",
           storage_backend: "Netlify Global CDN"
         },
-        endpoints: {
-          root: "/",
-          client_admin: "/client/admin"
-        },
         notice: "JSONPic CDN Storage is operational. Direct hotlinking without credentials will result in HTTP 403 Forbidden."
       },
       null,
