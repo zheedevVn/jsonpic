@@ -582,29 +582,19 @@
             <div id="folderBatchContainer" style="display: none; margin-bottom: 20px;">
               <div style="background: rgba(0, 242, 254, 0.06); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 12px; padding: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                  <strong style="color: #38bdf8; font-size: 0.95rem;">📁 Đã nhận diện <span id="detectedFolderCount">0</span> thư mục độc lập:</strong>
+                  <strong style="color: #38bdf8; font-size: 0.95rem;">📁 Đã nhận diện <span id="detectedFolderCount">0</span> thư mục truyện độc lập:</strong>
                   <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="clearSelectedFiles()">Xóa Hết</button>
                 </div>
                 <div id="detectedFolderList" style="display: flex; flex-direction: column; gap: 8px;"></div>
                 
                 <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
-                  <label class="form-label">Chọn cách đăng 3 thư mục độc lập:</label>
-                  <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.88rem; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
-                      <input type="radio" name="uploadMode" value="multi_site" checked>
-                      <div>
-                        <strong style="color: #34d399;">🚀 Mỗi thư mục 1 Site riêng (Khuyên dùng - Độc lập 100%)</strong>
-                        <div style="color: var(--text-muted); font-size: 0.75rem;">Hệ thống tự động tạo 3 site Netlify riêng biệt tương ứng tên từng thư mục. Băng thông và domain độc lập hoàn toàn.</div>
-                      </div>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.88rem; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
-                      <input type="radio" name="uploadMode" value="single_site">
-                      <div>
-                        <strong style="color: #38bdf8;">🌐 Chung 1 Site Netlify (Mỗi thư mục 1 đường dẫn riêng biệt)</strong>
-                        <div style="color: var(--text-muted); font-size: 0.75rem;">Tất cả 3 thư mục cùng đưa vào site bạn đã chọn ở trên, mỗi thư mục tạo thành 1 subfolder riêng.</div>
-                      </div>
-                    </label>
+                  <div style="color: #38bdf8; font-size: 0.85rem; font-weight: 600;">
+                    🌐 Cấu trúc link duy nhất của toàn bộ truyện:
                   </div>
+                  <div class="mono" style="color: #34d399; font-size: 0.8rem; margin-top: 6px; background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(52,211,153,0.2);">
+                    http://cdnjsonhentai.netlify.app/upload/{tên truyện}/từng ảnh 1
+                  </div>
+                  <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 6px;">Toàn bộ truyện đăng lên sẽ cùng nằm trên site <strong>cdnjsonhentai</strong>, độc lập thư mục và không bị ghi đè truyện cũ.</small>
                 </div>
               </div>
             </div>
@@ -855,17 +845,15 @@
         if (data.status === "success") {
           netlifySites = data.sites;
           const select = document.getElementById("selectSite");
-          select.innerHTML = "";
-
-          // Ưu tiên đưa api-doctruyen210 lên đầu nếu có
-          netlifySites.sort((a, b) => (a.name.includes("truyen") ? -1 : 1));
+          // Ưu tiên đưa cdnjsonhentai lên đầu làm site mặc định duy nhất
+          netlifySites.sort((a, b) => (a.name === "cdnjsonhentai" ? -1 : (b.name === "cdnjsonhentai" ? 1 : 0)));
 
           netlifySites.forEach(s => {
             const opt = document.createElement("option");
             opt.value = s.id;
             opt.setAttribute("data-url", s.url);
             opt.innerText = `${s.name} (${s.url})`;
-            if (s.name === "api-doctruyen210") opt.selected = true;
+            if (s.name === "cdnjsonhentai") opt.selected = true;
             select.appendChild(opt);
           });
 
@@ -1175,8 +1163,8 @@
       }
 
       const selectSite = document.getElementById("selectSite");
-      const baseSiteId = selectSite.value;
-      const baseSiteUrl = selectSite.options[selectSite.selectedIndex]?.getAttribute("data-url") || "";
+      const baseSiteId = selectSite.value || "9cfd6ecc-b354-4abd-9c00-9c0659b25ed4";
+      const baseSiteUrl = selectSite.options[selectSite.selectedIndex]?.getAttribute("data-url") || "http://cdnjsonhentai.netlify.app";
       const mangaName = document.getElementById("inputManga").value.trim();
       const chapter = document.getElementById("inputChapter").value.trim();
       const domains = document.getElementById("inputDomains").value.split(",").map(d => d.trim()).filter(Boolean);
@@ -1190,172 +1178,111 @@
       btn.disabled = true;
       alertBox.innerHTML = "";
       progressBar.style.display = "block";
-      progressFill.style.width = "10%";
+      progressFill.style.width = "5%";
 
-      try {
-        // TRƯỜNG HỢP 1: ĐĂNG NHIỀU THƯ MỤC ĐỘC LẬP
-        if (detectedFolders.size > 0) {
-          const uploadMode = document.querySelector('input[name="uploadMode"]:checked')?.value || "multi_site";
-          let allResults = [];
+      // Hàm gửi từng đợt ảnh (batching) để tránh vượt quá giới hạn 4.5MB của Vercel Serverless
+      async function uploadBatch({ siteId, siteUrl, mangaName, chapter, files }) {
+        const BATCH_SIZE = 15; // Tối đa 15 ảnh mỗi lượt gửi
+        let uploadedUrls = [];
 
-          if (uploadMode === "multi_site") {
-            // Chế độ 1: Mỗi thư mục tạo thành 1 Site Netlify riêng (Độc lập 100%)
-            let folderIndex = 0;
-            const totalFolders = detectedFolders.size;
-
-            for (const [folderName, items] of detectedFolders.entries()) {
-              folderIndex++;
-              btn.innerText = `⏳ Đang xử lý [${folderIndex}/${totalFolders}]: Thư mục "${folderName}"...`;
-              progressFill.style.width = `${Math.round((folderIndex / totalFolders) * 80)}%`;
-
-              // Tự động tạo site mới theo tên thư mục
-              const cleanSlug = folderName.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 24);
-              let targetSite = null;
-
-              try {
-                const createRes = await fetch("/api/admin/create-site", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-                  body: JSON.stringify({ name: cleanSlug })
-                });
-                const createData = await createRes.json();
-                if (createRes.ok && createData.status === "success") {
-                  targetSite = createData.site;
-                }
-              } catch (err) {}
-
-              const siteIdToUse = targetSite ? targetSite.id : baseSiteId;
-              const siteUrlToUse = targetSite ? (targetSite.ssl_url || targetSite.url) : baseSiteUrl;
-
-              // Đọc ảnh sang base64
-              const filesPayload = [];
-              for (const item of items) {
-                const b64 = await fileToBase64(item.file);
-                filesPayload.push({
-                  name: item.file.name,
-                  relativePath: item.file.name,
-                  base64: b64
-                });
-              }
-
-              // Upload lên site riêng của thư mục này
-              const uploadRes = await fetch("/api/admin/upload", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-                body: JSON.stringify({
-                  siteId: siteIdToUse,
-                  siteUrl: siteUrlToUse,
-                  mangaName: "",
-                  chapter: "",
-                  allowedDomains: domains,
-                  files: filesPayload
-                })
-              });
-
-              const uploadData = await uploadRes.json();
-              if (uploadRes.ok && uploadData.status === "success") {
-                allResults.push(`=== 📁 THƯ MỤC: ${folderName} (Site: ${siteUrlToUse}) ===\n` + uploadData.imageUrls.join("\n"));
-              } else {
-                allResults.push(`❌ Lỗi thư mục ${folderName}: ${uploadData.message || "Thất bại"}`);
-              }
-            }
-
-            loadSites(); // Reload danh sách site
-          } else {
-            // Chế độ 2: Chung 1 Site Netlify (Mỗi thư mục 1 đường dẫn riêng biệt)
-            btn.innerText = `⏳ Đang đóng gói cả ${detectedFolders.size} thư mục vào 1 đợt deploy...`;
-            progressFill.style.width = "40%";
-
-            const filesPayload = [];
-            for (const [folderName, items] of detectedFolders.entries()) {
-              const cleanFolderSlug = folderName.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
-              for (const item of items) {
-                const b64 = await fileToBase64(item.file);
-                filesPayload.push({
-                  name: item.file.name,
-                  relativePath: `${cleanFolderSlug}/${item.file.name}`,
-                  base64: b64
-                });
-              }
-            }
-
-            btn.innerText = "🚀 Đang tải lên Netlify CDN & Kích hoạt 403 Shield...";
-            progressFill.style.width = "85%";
-
-            const uploadRes = await fetch("/api/admin/upload", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-              body: JSON.stringify({
-                siteId: baseSiteId,
-                siteUrl: baseSiteUrl,
-                mangaName: "",
-                chapter: "",
-                allowedDomains: domains,
-                files: filesPayload
-              })
+        for (let i = 0; i < files.length; i += BATCH_SIZE) {
+          const chunk = files.slice(i, i + BATCH_SIZE);
+          const chunkPayload = [];
+          for (const item of chunk) {
+            const b64 = await fileToBase64(item.file);
+            chunkPayload.push({
+              name: item.file.name,
+              relativePath: item.relativePath || item.file.name,
+              base64: b64
             });
-
-            const uploadData = await uploadRes.json();
-            if (uploadRes.ok && uploadData.status === "success") {
-              allResults.push(`=== 🌐 CẢ ${detectedFolders.size} THƯ MỤC TRÊN SITE: ${baseSiteUrl} ===\n` + uploadData.imageUrls.join("\n"));
-            } else {
-              throw new Error(uploadData.message || "Tải lên thất bại");
-            }
           }
 
-          progressFill.style.width = "100%";
-          resultBox.style.display = "block";
-          document.getElementById("resultTextarea").value = allResults.join("\n\n");
-          alertBox.innerHTML = `<div class="alert alert-success">🎉 Đã đăng thành công toàn bộ ${detectedFolders.size} thư mục hoàn toàn độc lập!</div>`;
-          return;
-        }
-
-        // TRƯỜNG HỢP 2: ĐĂNG TỪNG FILE ĐƠN LẺ
-        btn.innerText = "⏳ Đang xử lý và mã hóa dữ liệu ảnh...";
-        progressFill.style.width = "30%";
-
-        const filesPayload = [];
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const file = selectedFiles[i];
-          const b64 = await fileToBase64(file);
-          filesPayload.push({
-            name: file.name,
-            base64: b64
+          const res = await fetch("/api/admin/upload", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+              siteId,
+              siteUrl,
+              mangaName,
+              chapter,
+              allowedDomains: domains,
+              files: chunkPayload
+            })
           });
-          progressFill.style.width = `${30 + Math.round((i / selectedFiles.length) * 40)}%`;
+
+          const data = await res.json();
+          if (!res.ok || data.status !== "success") {
+            throw new Error(data.message || `Lỗi tải lên đợt ảnh (${i + 1}-${i + chunk.length})`);
+          }
+          if (data.imageUrls) {
+            uploadedUrls = uploadedUrls.concat(data.imageUrls);
+          }
         }
+        return uploadedUrls;
+      }
 
-        btn.innerText = "🚀 Đang đẩy lên Netlify CDN & Kích hoạt 403 Shield...";
-        progressFill.style.width = "85%";
+      try {
+        let allResults = [];
+        let totalProcessedImages = 0;
 
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`
-          },
-          body: JSON.stringify({
+        // TRƯỜNG HỢP 1: ĐĂNG CÁC THƯ MỤC TRUYỆN ĐỘC LẬP (Chung 1 site cdnjsonhentai)
+        if (detectedFolders.size > 0) {
+          let folderIndex = 0;
+          const totalFolders = detectedFolders.size;
+
+          for (const [folderName, items] of detectedFolders.entries()) {
+            folderIndex++;
+            btn.innerText = `⏳ Đang tải [${folderIndex}/${totalFolders}]: Thư mục "${folderName}" (${items.length} ảnh)...`;
+            progressFill.style.width = `${Math.round((folderIndex / totalFolders) * 85)}%`;
+
+            // Mỗi file có relativePath = `${folderName}/${file.name}`
+            const preparedItems = items.map(item => ({
+              file: item.file,
+              relativePath: `${folderName}/${item.file.name}`
+            }));
+
+            const urls = await uploadBatch({
+              siteId: baseSiteId,
+              siteUrl: baseSiteUrl,
+              mangaName: "",
+              chapter: "",
+              files: preparedItems
+            });
+
+            allResults.push(`=== 📁 THƯ MỤC: ${folderName} ===\n` + urls.join("\n"));
+            totalProcessedImages += items.length;
+          }
+        } else {
+          // TRƯỜNG HỢP 2: ĐĂNG CÁC FILE ĐƠN LẺ
+          btn.innerText = `⏳ Đang tải ${selectedFiles.length} ảnh lên ${baseSiteUrl}...`;
+          progressFill.style.width = "40%";
+
+          const preparedItems = selectedFiles.map(file => ({
+            file,
+            relativePath: file.name
+          }));
+
+          const urls = await uploadBatch({
             siteId: baseSiteId,
             siteUrl: baseSiteUrl,
             mangaName,
             chapter,
-            allowedDomains: domains,
-            files: filesPayload
-          })
-        });
+            files: preparedItems
+          });
 
-        const data = await res.json();
-        progressFill.style.width = "100%";
-
-        if (res.ok && data.status === "success") {
-          resultBox.style.display = "block";
-          document.getElementById("resultTextarea").value = data.imageUrls.join("\n");
-          alertBox.innerHTML = `<div class="alert alert-success">✓ Đã đăng thành công ${data.totalImages} ảnh lên ${baseSiteUrl}!</div>`;
-        } else {
-          alertBox.innerHTML = `<div class="alert alert-error">❌ Lỗi: ${data.message || "Tải lên thất bại"}</div>`;
+          allResults.push(urls.join("\n"));
+          totalProcessedImages = selectedFiles.length;
         }
+
+        progressFill.style.width = "100%";
+        resultBox.style.display = "block";
+        document.getElementById("resultTextarea").value = allResults.join("\n\n");
+        alertBox.innerHTML = `<div class="alert alert-success">🎉 Đã đăng thành công ${totalProcessedImages} ảnh lên cdnjsonhentai! Toàn bộ link chuẩn http://cdnjsonhentai.netlify.app/upload/{tên truyện}/từng ảnh 1 và giữ nguyên toàn bộ truyện cũ.</div>`;
       } catch (err) {
-        alertBox.innerHTML = `<div class="alert alert-error">❌ Lỗi hệ thống: ${err.message}</div>`;
+        alertBox.innerHTML = `<div class="alert alert-error">❌ Lỗi tải lên: ${err.message}</div>`;
       } finally {
         btn.disabled = false;
         btn.innerText = "⚡ Tải Lên & Khóa Bảo Mật 403 Toàn Bộ Internet";

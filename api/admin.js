@@ -199,31 +199,40 @@ module.exports = async function handler(req, res) {
     ).filter(Boolean);
 
     try {
-      // Chuẩn bị đường dẫn file (hỗ trợ cả đường dẫn thư mục con)
-      const prefix = [mangaName, chapter].filter(Boolean).map(s => s.trim().replace(/[^a-zA-Z0-9_\-\.]/g, "_")).join("/");
-      const formattedFiles = files.map(file => {
-        const rawPath = file.relativePath || file.name;
-        const cleanPath = rawPath
-          .split("/")
-          .map(part => part.trim().replace(/[^a-zA-Z0-9_\-\.]/g, "_"))
-          .filter(Boolean)
-          .join("/");
+      // Chuẩn bị đường dẫn file theo chuẩn: http://cdnjsonhentai.netlify.app/upload/{tên truyện}/từng ảnh 1
+      const defaultHost = "http://cdnjsonhentai.netlify.app";
+      let hostUrl = (siteUrl || defaultHost).replace(/\/$/, "");
+      if (hostUrl.includes("cdnjsonhentai.netlify.app")) {
+        hostUrl = "http://cdnjsonhentai.netlify.app";
+      }
 
-        const relPath = prefix ? `${prefix}/${cleanPath}` : cleanPath;
+      const formattedFiles = files.map(file => {
+        let rawPath = (file.relativePath || file.name).replace(/^\/+/, "");
+        rawPath = rawPath.replace(/^upload\//, "");
+
+        let targetPath = "";
+        if (mangaName) {
+          const cleanManga = mangaName.trim();
+          const cleanChap = chapter ? chapter.trim() : "";
+          const folderPrefix = cleanChap ? `${cleanManga}/${cleanChap}` : cleanManga;
+          targetPath = `upload/${folderPrefix}/${rawPath}`;
+        } else {
+          targetPath = `upload/${rawPath}`;
+        }
+
         return {
-          name: relPath,
+          name: targetPath,
           data: Buffer.from(file.base64, "base64")
         };
       });
 
       const deployResult = await deployMangaToNetlify({
-        siteId,
+        siteId: siteId || "9cfd6ecc-b354-4abd-9c00-9c0659b25ed4",
         files: formattedFiles,
         allowedDomains: allAllowedDomains,
         allowedIps: allAllowedIps
       });
 
-      const hostUrl = (siteUrl || `https://${siteId}.netlify.app`).replace(/\/$/, "");
       const imageUrls = formattedFiles.map(f => `${hostUrl}/${f.name}`);
 
       // Lưu lại lịch sử gần đây

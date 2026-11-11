@@ -38,13 +38,20 @@
 
 ---
 
-## 3. TÀI KHOẢN NETLIFY & CƠ CHẾ LƯU TRỮ ẢNH TRUYỆN
+## 3. TÀI KHOẢN NETLIFY & QUY CHUẨN LƯU TRỮ TRUYỆN DUY NHẤT (CDNJSONHENTAI)
 
 * **Netlify Personal Access Token:** `nfp_BkhSuHWnWc3JynUg...` (Lưu trong biến môi trường `NETLIFY_TOKEN`)
-* **Mạng lưới Site CDN:** Tài khoản hiện có **74 site** Netlify (`api-doctruyen210`, `doggyv1` đến `doggyv18`, `taianh210`,...).
-* **Cách thức Deploy ảnh:**
-  * Ảnh được tải lên Netlify qua REST API: `POST https://api.netlify.com/api/v1/sites/{site_id}/deploys` với header `Content-Type: application/zip`.
-  * Bộ nén `lib/zip.js` thực hiện nén in-memory không cần thư viện bên ngoài nặng nề.
+* **Site CDN Chuẩn Duy Nhất:**
+  * **Site Name:** `cdnjsonhentai`
+  * **Site ID:** `9cfd6ecc-b354-4abd-9c00-9c0659b25ed4`
+  * **URL Chuẩn Bắt Buộc:** `http://cdnjsonhentai.netlify.app/upload/{tên truyện}/từng ảnh 1`
+* **Cơ Chế Deploy Giữ Nguyên 100% Truyện Cũ (Incremental SHA1 Digest):**
+  * Không dùng deploy dạng zip ghi đè toàn bộ site.
+  * Tệp `lib/netlify.js` tự động truy vấn danh sách file của bản deploy `ready` trước đó qua API Netlify (`/deploys/{id}/files`).
+  * Gộp SHA1 digest của các file cũ với các file truyện mới tải lên.
+  * Chỉ tải lên (PUT) các file mới mà Netlify yêu cầu (`deploy.required`).
+  * Đợi deploy đạt trạng thái `ready` (1-2s) để đảm bảo tính nhất quán dữ liệu cho các lần đăng tiếp theo.
+  * Nhờ đó: Người dùng có thể đăng hàng trăm bộ truyện / chương truyện khác nhau mà **KHÔNG BAO GIỜ BỊ MẤT TRUYỆN CŨ**.
 
 ---
 
@@ -86,11 +93,12 @@ Tệp `lib/security.js` phụ trách bảo vệ hệ sinh thái:
 Theo yêu cầu của người dùng:
 1. **Không hiển thị gợi ý (No suggestions/placeholders):**
    * Các input `inputManga`, `inputChapter`, `inputDomains`, `customIpInput` phải để `placeholder=""` và `value=""`.
-2. **Hỗ trợ Đăng Nhiều Thư Mục Độc Lập (Batch Multi-Folder Upload):**
-   * Hỗ trợ kéo thả đồng thời nhiều thư mục truyện từ Windows Explorer hoặc bấm nút `[📂 Chọn Thư Mục (Folder)]`.
-   * Hỗ trợ 2 chế độ:
-     - `multi_site`: Mỗi thư mục tự động tạo 1 Site Netlify riêng biệt (độc lập 100% về domain, CDN và băng thông).
-     - `single_site`: Gom các thư mục vào chung 1 site Netlify (mỗi thư mục giữ đường dẫn thư mục con riêng biệt).
+2. **Quy Chuẩn 1 Domain Duy Nhất (Single CDN Link):**
+   * Người dùng không muốn tạo hàng chục site riêng biệt.
+   * Tất cả thư mục khi kéo thả (kể cả 3 thư mục độc lập từ máy tính) sẽ cùng đẩy lên site duy nhất `cdnjsonhentai` (`9cfd6ecc-b354-4abd-9c00-9c0659b25ed4`).
+   * Cấu trúc URL trả về luôn là:  
+     `http://cdnjsonhentai.netlify.app/upload/{tên truyện}/từng ảnh 1`
+   * Tự động batching thành các đợt tối đa 15 ảnh để không bao giờ bị dính lỗi `413 Payload Too Large` của Vercel Serverless (4.5MB limit).
 
 ---
 
@@ -103,11 +111,11 @@ jsonpic/
 │   └── admin.js             # API /api/admin: login, info, sites, create-site, ip-whitelist, upload
 ├── lib/
 │   ├── security.js          # WAF phòng thủ: Anti-SQLi, Anti-Dump, Anti-Map, Rate-limit, JWT
-│   ├── netlify.js           # Tương tác Netlify API & sinh mã Edge Function 403 Protection
+│   ├── netlify.js           # Netlify SHA1 Digest Deploy (Incremental) & Edge Function 403
 │   ├── zip.js               # Bộ nén zip in-memory chuẩn PKZIP
 │   └── db.js                # Quản lý cài đặt cấu hình IP Whitelist & Domain Whitelist
 ├── public/
-│   └── admin.html           # Giao diện Cyber Luxury Admin Suite
+│   └── admin.html           # Giao diện Cyber Luxury Admin Suite (Batch Upload, Link Generator)
 ├── vercel.json              # Cấu hình rewrite & security headers của Vercel
 ├── package.json
 ├── README.md
