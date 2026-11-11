@@ -487,15 +487,15 @@
 
       <div id="loginAlert"></div>
 
-      <form id="loginForm" onsubmit="handleLogin(event)">
+      <form id="loginForm" onsubmit="handleLogin(event)" autocomplete="off">
         <div class="form-group">
           <label class="form-label">Tài khoản Admin</label>
-          <input type="text" id="loginUser" class="form-control" placeholder="hoducminh" required autocomplete="username">
+          <input type="text" id="loginUser" class="form-control" placeholder="" required autocomplete="off" spellcheck="false">
         </div>
 
         <div class="form-group">
           <label class="form-label">Mật khẩu bảo mật</label>
-          <input type="password" id="loginPass" class="form-control" placeholder="••••••••••••" required autocomplete="current-password">
+          <input type="password" id="loginPass" class="form-control" placeholder="" required autocomplete="new-password">
         </div>
 
         <button type="submit" id="loginBtn" class="btn" style="width: 100%; justify-content: center; padding: 12px;">
@@ -530,7 +530,7 @@
 
           <div id="uploadAlert"></div>
 
-          <form id="uploadForm" onsubmit="handleUploadManga(event)">
+          <form id="uploadForm" onsubmit="handleUploadManga(event)" autocomplete="off">
             <div class="grid-2">
               <div class="form-group">
                 <label class="form-label">Chọn Site Lưu Trữ Netlify</label>
@@ -543,18 +543,18 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Tên Bộ Truyện (Slug)</label>
-                <input type="text" id="inputManga" class="form-control" placeholder="one-piece hoặc vo-luyen-dinh-phong" required>
+                <label class="form-label">Tên Bộ Truyện</label>
+                <input type="text" id="inputManga" class="form-control" placeholder="" autocomplete="off" spellcheck="false" required>
               </div>
 
               <div class="form-group">
                 <label class="form-label">Chương (Chapter)</label>
-                <input type="text" id="inputChapter" class="form-control" placeholder="chap-1050" required>
+                <input type="text" id="inputChapter" class="form-control" placeholder="" autocomplete="off" spellcheck="false" required>
               </div>
 
               <div class="form-group">
                 <label class="form-label">Tên Miền Web Được Phép Xem Ảnh (Domain Whitelist)</label>
-                <input type="text" id="inputDomains" class="form-control" placeholder="doctruyen.com, api-zhee.vercel.app, jsonpic.vercel.app" value="doctruyen.com, api-zhee.vercel.app, jsonpic.vercel.app, localhost">
+                <input type="text" id="inputDomains" class="form-control" placeholder="" value="" autocomplete="off" spellcheck="false">
                 <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">Người ngoài hoặc web khác lấy link sẽ nhận ngay lỗi 403 Forbidden.</small>
               </div>
             </div>
@@ -625,7 +625,7 @@
           </div>
 
           <div style="display: flex; gap: 10px; margin-top: 20px;">
-            <input type="text" id="customIpInput" class="form-control mono" placeholder="Nhập địa chỉ IPv4 hoặc IPv6 cần whitelist (ví dụ: 113.161.x.x)">
+            <input type="text" id="customIpInput" class="form-control mono" placeholder="" autocomplete="off" spellcheck="false">
             <button class="btn" onclick="addCustomIp()">Thêm IP</button>
           </div>
 
