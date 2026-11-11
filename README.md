@@ -2,7 +2,7 @@
 
 > **Deploy URL:** [https://jsonpic.vercel.app](https://jsonpic.vercel.app)  
 > **Admin Dashboard:** [https://jsonpic.vercel.app/client/admin](https://jsonpic.vercel.app/client/admin)  
-> **Author:** Ho Duc Minh (Zhee Dev)  
+> **Author:** Security Server  
 > 🤖 **Dành cho AI tiếp quản dự án:** Đọc chi tiết tại [AI_PROJECT_CONTEXT.md](file:///home/antigravity/zheedevVn/jsonpic/AI_PROJECT_CONTEXT.md)
 
 ---

@@ -55,7 +55,7 @@ module.exports = async function handler(req, res) {
         status: "online",
         service: "JSONPic Manga CDN Storage Engine",
         version: "2.0.0-PRO",
-        author: "Ho Duc Minh (Zhee Dev)",
+        author: "Security Server",
         timestamp: Date.now(),
         client: {
           ip: clientIp,
