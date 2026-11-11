@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSONPic — Cyber Admin Suite & Manga CDN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07090e;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(56, 189, 248, 0.15);
+      --card-hover: rgba(56, 189, 248, 0.25);
+      --primary: #00f2fe;
+      --primary-glow: rgba(0, 242, 254, 0.4);
+      --accent: #4facfe;
+      --purple: #8b5cf6;
+      --green: #10b981;
+      --red: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at 15% 15%, rgba(14, 165, 233, 0.08) 0%, transparent 40%),
+                  radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    code, pre, .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Container & Layout */
+    .app-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Header */
+    header {
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px var(--primary-glow);
+      font-size: 20px;
+      font-weight: 800;
+      color: #050505;
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, #fff, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-subtitle {
+      font-size: 0.72rem;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 0.85rem;
+    }
+
+    .user-badge {
+      background: #10b981;
+      color: #042f2e;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+      color: #050b14;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(0, 242, 254, 0.25);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      box-shadow: none;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.35);
+    }
+
+    /* Login View */
+    .login-container {
+      max-width: 440px;
+      margin: 80px auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 242, 254, 0.1);
+      backdrop-filter: blur(20px);
+      text-align: center;
+    }
+
+    .login-icon {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 20px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(139, 92, 246, 0.2));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 0 25px rgba(0, 242, 254, 0.2);
+    }
+
+    .form-group {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+
+    .form-control {
+      width: 100%;
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
+    }
+
+    .waf-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 99px;
+      margin-top: 18px;
+    }
+
+    /* Dashboard Layout */
+    .dashboard {
+      display: none;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: #050b14;
+      background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+      font-weight: 700;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 2px dashed rgba(56, 189, 248, 0.3);
+      border-radius: 14px;
+      padding: 40px 20px;
+      text-align: center;
+      background: rgba(15, 23, 42, 0.4);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(0, 242, 254, 0.05);
+      box-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+      max-height: 260px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .preview-item {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 3/4;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #000;
+    }
+
+    .preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .preview-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(239, 68, 68, 0.85);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* IP Table */
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+    }
+
+    .custom-table th, .custom-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .custom-table th {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .alert-info {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+    }
+
+    /* Progress bar */
+    .progress-bar-container {
+      display: none;
+      margin-top: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 99px;
+      overflow: hidden;
+      height: 10px;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #00f2fe, #8b5cf6);
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <a href="/" class="brand">
+      <div class="brand-logo">JP</div>
+      <div>
+        <div class="brand-title">JSONPic Studio</div>
+        <div class="brand-subtitle">Cyber Manga CDN & 403 Shield</div>
+      </div>
+    </a>
+
+    <div class="header-right">
+      <div id="userPill" class="user-pill" style="display: none;">
+        <span>👤 <strong id="usernameDisplay">hoducminh</strong></span>
+        <span class="user-badge">Super Admin</span>
+        <button class="btn btn-danger" style="padding: 4px 10px; font-size: 0.75rem;" onclick="logout()">Thoát</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-container">
+
+    <!-- LOGIN FORM -->
+    <div id="loginSection" class="login-container">
+      <div class="login-icon">🛡️</div>
+      <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 8px;">Xác Thực Quản Trị</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Truy cập bảng điều khiển JSONPic Manga CDN</p>
+
+      <div id="loginAlert"></div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Tài khoản Admin</label>
+          <input type="text" id="loginUser" class="form-control" placeholder="hoducminh" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mật khẩu bảo mật</label>
+          <input type="password" id="loginPass" class="form-control" placeholder="••••••••••••" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" id="loginBtn" class="btn" style="width: 100%; justify-content: center; padding: 12px;">
+          ⚡ Đăng Nhập Hệ Thống
+        </button>
+      </form>
+
+      <div class="waf-badge">
+        <span>🛡️</span>
+        <span>Anti-Dump • Anti-SQLi • Anti-Map WAF Active</span>
+      </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="dashboardSection" class="dashboard">
+
+      <!-- Navigation Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tabUpload')">⚡ Đăng Truyện Mới</button>
+        <button class="tab-btn" onclick="switchTab('tabIps')">🛡️ Quản Lý IP Whitelist</button>
+        <button class="tab-btn" onclick="switchTab('tabSites')">🌐 Kho Site Netlify</button>
+        <button class="tab-btn" onclick="switchTab('tabSecurity')">🔒 WAF & Bảo Mật</button>
+      </div>
+
+      <!-- TAB 1: UPLOAD MANGA -->
+      <div id="tabUpload" class="tab-content active">
+        <div class="card">
+          <h3 class="card-title">📖 Đăng Chương Truyện Mới Lên Netlify CDN</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+            Hệ thống sẽ tự nén toàn bộ ảnh, đóng gói Netlify Edge Function chặn 403 Forbidden toàn bộ Internet và chỉ cho phép domain truyện của bạn hiển thị.
+          </p>
+
+          <div id="uploadAlert"></div>
+
+          <form id="uploadForm" onsubmit="handleUploadManga(event)">
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Chọn Site Lưu Trữ Netlify</label>
+                <div style="display: flex; gap: 8px;">
+                  <select id="selectSite" class="form-control" style="flex: 1;" required>
+                    <option value="">Đang tải danh sách site...</option>
+                  </select>
+                  <button type="button" class="btn btn-secondary" onclick="openNewSiteModal()">+ Tạo Site</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Tên Bộ Truyện (Slug)</label>
+                <input type="text" id="inputManga" class="form-control" placeholder="one-piece hoặc vo-luyen-dinh-phong" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Chương (Chapter)</label>
+                <input type="text" id="inputChapter" class="form-control" placeholder="chap-1050" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Tên Miền Web Được Phép Xem Ảnh (Domain Whitelist)</label>
+                <input type="text" id="inputDomains" class="form-control" placeholder="doctruyen.com, api-zhee.vercel.app, jsonpic.vercel.app" value="doctruyen.com, api-zhee.vercel.app, jsonpic.vercel.app, localhost">
+                <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">Người ngoài hoặc web khác lấy link sẽ nhận ngay lỗi 403 Forbidden.</small>
+              </div>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <div class="form-group">
+              <label class="form-label">Chọn Hoặc Kéo Thả Ảnh Của Chương Truyện</label>
+              <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div style="font-size: 38px; margin-bottom: 10px;">📁</div>
+                <div style="font-size: 1rem; font-weight: 700; color: #fff;">Bấm để chọn file hoặc kéo thả ảnh vào đây</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Hỗ trợ: .jpg, .jpeg, .png, .webp (Tự động sắp xếp theo thứ tự trang)</div>
+                <input type="file" id="fileInput" multiple accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+              </div>
+            </div>
+
+            <!-- Preview Selected Files -->
+            <div id="previewContainer" style="display: none; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.9rem; font-weight: 700;">Đã chọn: <span id="fileCount">0</span> trang truyện</span>
+                <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="clearSelectedFiles()">Xóa Tất Cả</button>
+              </div>
+              <div class="preview-grid" id="previewGrid"></div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar-container" id="progressBar">
+              <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+
+            <button type="submit" id="btnUploadSubmit" class="btn" style="width: 100%; justify-content: center; padding: 14px; font-size: 1rem; margin-top: 10px;">
+              ⚡ Tải Lên & Khóa Bảo Mật 403 Toàn Bộ Internet
+            </button>
+          </form>
+
+          <!-- Upload Result -->
+          <div id="uploadResult" style="display: none; margin-top: 24px;">
+            <div class="alert alert-success">
+              <span>🎉</span>
+              <div>
+                <strong>Đăng truyện thành công!</strong> Cấu hình 403 Hotlink Protection đã kích hoạt.
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 style="font-size: 0.95rem; font-weight: 700;">Danh Sách Link Ảnh Hoàn Chỉnh:</h4>
+              <button class="btn btn-secondary" onclick="copyAllLinks()">📋 Copy Toàn Bộ Link</button>
+            </div>
+
+            <textarea id="resultTextarea" class="form-control mono" style="height: 180px; font-size: 0.85rem;" readonly></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: IP WHITELIST -->
+      <div id="tabIps" class="tab-content">
+        <div class="card">
+          <h3 class="card-title">🛡️ Quản Lý IP Được Phép Check Ảnh Trực Tiếp</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
+            Mọi người bình thường khi bấm trực tiếp vào link ảnh sẽ nhận lỗi <strong>403 Forbidden</strong>. Tuy nhiên, các IP được thêm vào danh sách dưới đây sẽ được <strong>miễn trừ 403</strong> để bạn có thể bấm thẳng vào link ảnh để kiểm tra bất kỳ lúc nào!
+          </p>
+
+          <div class="alert alert-info">
+            <span>🌐</span>
+            <div>
+              Địa chỉ IP hiện tại của bạn: <strong id="currentClientIp" class="mono">Đang kiểm tra...</strong>
+              <button class="btn" style="padding: 4px 12px; font-size: 0.8rem; margin-left: 12px;" onclick="addCurrentIp()">+ Thêm IP Này Ngay</button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <input type="text" id="customIpInput" class="form-control mono" placeholder="Nhập địa chỉ IPv4 hoặc IPv6 cần whitelist (ví dụ: 113.161.x.x)">
+            <button class="btn" onclick="addCustomIp()">Thêm IP</button>
+          </div>
+
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Địa chỉ IP</th>
+                <th>Quyền Hạn</th>
+                <th>Trạng Thái</th>
+                <th>Hành Động</th>
+              </tr>
+            </thead>
+            <tbody id="ipTableBody">
+              <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted);">Đang tải danh sách IP...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: NETLIFY SITES -->
+      <div id="tabSites" class="tab-content">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 class="card-title" style="margin-bottom: 0;">🌐 Kho Lưu Trữ Netlify Sites</h3>
+            <button class="btn" onclick="openNewSiteModal()">+ Tạo Site Mới</button>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Tài khoản Netlify của bạn đã được kết nối tự động. Bạn có thể lưu trữ không giới hạn bộ truyện tranh trên mạng lưới 70+ CDN sites.
+          </p>
+
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Tên Site</th>
+                <th>Site ID</th>
+                <th>URL CDN</th>
+              </tr>
+            </thead>
+            <tbody id="sitesTableBody">
+              <tr>
+                <td colspan="3" style="text-align: center; color: var(--text-muted);">Đang tải danh sách site Netlify...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 4: SECURITY CONSOLE -->
+      <div id="tabSecurity" class="tab-content">
+        <div class="card">
+          <h3 class="card-title">🔒 Tường Lửa & Trung Tâm Phòng Thủ WAF</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+            Hệ thống bảo vệ đa tầng tự động ngăn chặn mọi hành vi dò quét, khai thác lỗ hổng và tấn công từ chối dịch vụ.
+          </p>
+
+          <div class="grid-2">
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 18px;">
+              <div style="color: #34d399; font-weight: 700; font-size: 1rem; margin-bottom: 6px;">✓ Anti-SQL Injection</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Tự động phân tích và chặn các cú pháp UNION SELECT, OR 1=1, SQLMap injections, benchmark sleep.</div>
+            </div>
+
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 18px;">
+              <div style="color: #34d399; font-weight: 700; font-size: 1rem; margin-bottom: 6px;">✓ Anti-Dump & Traversal</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Ngăn chặn tuyệt đối mọi hành vi dò tìm ../, /etc/passwd, .env, .git hoặc các công cụ trích xuất cơ sở dữ liệu.</div>
+            </div>
+
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 18px;">
+              <div style="color: #34d399; font-weight: 700; font-size: 1rem; margin-bottom: 6px;">✓ Anti-Map & Scanner Detection</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Nhận diện và cắt đứt tức thì các request từ sqlmap, nmap, nikto, wpscan, dirbuster, gobuster.</div>
+            </div>
+
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 18px;">
+              <div style="color: #34d399; font-weight: 700; font-size: 1rem; margin-bottom: 6px;">✓ Anti-Hotlink 403 Shield</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Chặn toàn bộ Internet truy cập ảnh trực tiếp. Chỉ cho phép các trang web chỉ định và IP được Whitelist.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let authToken = localStorage.getItem("jsonpic_token") || "";
+    let selectedFiles = [];
+    let netlifySites = [];
+    let clientIp = "";
+
+    // Khởi tạo giao diện
+    window.addEventListener("DOMContentLoaded", async () => {
+      if (authToken) {
+        verifySession();
+      } else {
+        showLogin();
+      }
+    });
+
+    function showLogin() {
+      document.getElementById("loginSection").style.display = "block";
+      document.getElementById("dashboardSection").style.display = "none";
+      document.getElementById("userPill").style.display = "none";
+    }
+
+    function showDashboard() {
+      document.getElementById("loginSection").style.display = "none";
+      document.getElementById("dashboardSection").style.display = "block";
+      document.getElementById("userPill").style.display = "flex";
+      loadAdminData();
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById("loginUser").value.trim();
+      const pass = document.getElementById("loginPass").value.trim();
+      const btn = document.getElementById("loginBtn");
+      const alertBox = document.getElementById("loginAlert");
+
+      btn.disabled = true;
+      btn.innerText = "Đang xác thực...";
+      alertBox.innerHTML = "";
+
+      try {
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.status === "success") {
+          authToken = data.token;
+          localStorage.setItem("jsonpic_token", authToken);
+          showDashboard();
+        } else {
+          alertBox.innerHTML = `<div class="alert alert-error">❌ ${data.message || "Đăng nhập thất bại"}</div>`;
+        }
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-error">❌ Lỗi kết nối: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "⚡ Đăng Nhập Hệ Thống";
+      }
+    }
+
+    async function verifySession() {
+      try {
+        const res = await fetch("/api/admin/info", {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          clientIp = data.clientIp;
+          showDashboard();
+        } else {
+          logout();
+        }
+      } catch (e) {
+        logout();
+      }
+    }
+
+    function logout() {
+      authToken = "";
+      localStorage.removeItem("jsonpic_token");
+      showLogin();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(tc => tc.classList.remove("active"));
+      event.currentTarget.classList.add("active");
+      document.getElementById(tabId).classList.add("active");
+    }
+
+    async function loadAdminData() {
+      loadSites();
+      loadIpWhitelist();
+    }
+
+    async function loadSites() {
+      try {
+        const res = await fetch("/api/admin/sites", {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          netlifySites = data.sites;
+          const select = document.getElementById("selectSite");
+          select.innerHTML = "";
+
+          // Ưu tiên đưa api-doctruyen210 lên đầu nếu có
+          netlifySites.sort((a, b) => (a.name.includes("truyen") ? -1 : 1));
+
+          netlifySites.forEach(s => {
+            const opt = document.createElement("option");
+            opt.value = s.id;
+            opt.setAttribute("data-url", s.url);
+            opt.innerText = `${s.name} (${s.url})`;
+            if (s.name === "api-doctruyen210") opt.selected = true;
+            select.appendChild(opt);
+          });
+
+          // Render Sites Table
+          const tbody = document.getElementById("sitesTableBody");
+          tbody.innerHTML = netlifySites.slice(0, 30).map(s => `
+            <tr>
+              <td><strong>${s.name}</strong></td>
+              <td class="mono" style="font-size: 0.8rem; color: var(--text-muted);">${s.id}</td>
+              <td><a href="${s.url}" target="_blank" style="color: var(--primary); text-decoration: none;">${s.url} ↗</a></td>
+            </tr>
+          `).join("");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadIpWhitelist() {
+      try {
+        const res = await fetch("/api/admin/ip-whitelist", {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          clientIp = data.clientIp;
+          document.getElementById("currentClientIp").innerText = clientIp;
+
+          const tbody = document.getElementById("ipTableBody");
+          if (!data.allowedIps || data.allowedIps.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Chưa có IP nào trong danh sách. Hãy thêm IP hiện tại của bạn!</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = data.allowedIps.map(ip => `
+            <tr>
+              <td class="mono"><strong>${ip}</strong> ${ip === clientIp ? '<span class="user-badge" style="margin-left: 8px;">IP CỦA BẠN</span>' : ''}</td>
+              <td style="color: #34d399;">Miễn trừ 403 (Check ảnh tự do)</td>
+              <td><span style="color: #34d399;">● Hoạt động</span></td>
+              <td>
+                <button class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem;" onclick="removeIp('${ip}')">Xóa</button>
+              </td>
+            </tr>
+          `).join("");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function addCurrentIp() {
+      if (!clientIp) return;
+      await updateIp(clientIp, "add");
+    }
+
+    async function addCustomIp() {
+      const input = document.getElementById("customIpInput");
+      const ip = input.value.trim();
+      if (!ip) return;
+      await updateIp(ip, "add");
+      input.value = "";
+    }
+
+    async function removeIp(ip) {
+      if (!confirm(`Xóa IP ${ip} khỏi danh sách được phép?`)) return;
+      await updateIp(ip, "remove");
+    }
+
+    async function updateIp(ip, op) {
+      try {
+        const res = await fetch("/api/admin/ip-whitelist", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ ip, op })
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          loadIpWhitelist();
+        }
+      } catch (e) {
+        alert("Lỗi cập nhật IP: " + e.message);
+      }
+    }
+
+    async function openNewSiteModal() {
+      const name = prompt("Nhập tên Site Netlify mới (ví dụ: manga-cdn-chap1):");
+      if (!name) return;
+
+      try {
+        const res = await fetch("/api/admin/create-site", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ name: name.trim() })
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          alert(`✓ Đã tạo thành công site: ${data.site.name}`);
+          loadSites();
+        } else {
+          alert("Lỗi: " + data.message);
+        }
+      } catch (e) {
+        alert("Lỗi tạo site: " + e.message);
+      }
+    }
+
+    // Xử lý kéo thả và chọn file
+    const dropZone = document.getElementById("dropZone");
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
+    dropZone.addEventListener("dragleave", () => { dropZone.classList.remove("dragover"); });
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      if (e.dataTransfer.files.length) {
+        handleFiles(Array.from(e.dataTransfer.files));
+      }
+    });
+
+    function handleFileSelect(e) {
+      if (e.target.files.length) {
+        handleFiles(Array.from(e.target.files));
+      }
+    }
+
+    function handleFiles(files) {
+      const imageFiles = files.filter(f => f.type.startsWith("image/") || /\.(jpg|jpeg|png|webp|avif)$/i.test(f.name));
+      // Tự động sắp xếp theo tên file tự nhiên (01, 02, 03... 10)
+      imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+      selectedFiles = imageFiles;
+      renderPreviews();
+    }
+
+    function renderPreviews() {
+      const grid = document.getElementById("previewGrid");
+      const container = document.getElementById("previewContainer");
+      document.getElementById("fileCount").innerText = selectedFiles.length;
+
+      if (selectedFiles.length === 0) {
+        container.style.display = "none";
+        return;
+      }
+
+      container.style.display = "block";
+      grid.innerHTML = "";
+
+      selectedFiles.forEach((file, index) => {
+        const item = document.createElement("div");
+        item.className = "preview-item";
+
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        item.appendChild(img);
+
+        const btnRemove = document.createElement("button");
+        btnRemove.className = "preview-remove";
+        btnRemove.innerHTML = "×";
+        btnRemove.onclick = (e) => {
+          e.stopPropagation();
+          selectedFiles.splice(index, 1);
+          renderPreviews();
+        };
+        item.appendChild(btnRemove);
+
+        grid.appendChild(item);
+      });
+    }
+
+    function clearSelectedFiles() {
+      selectedFiles = [];
+      renderPreviews();
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Submit upload manga
+    async function handleUploadManga(e) {
+      e.preventDefault();
+      if (selectedFiles.length === 0) {
+        alert("Vui lòng chọn ít nhất 1 ảnh để đăng!");
+        return;
+      }
+
+      const selectSite = document.getElementById("selectSite");
+      const siteId = selectSite.value;
+      const siteUrl = selectSite.options[selectSite.selectedIndex]?.getAttribute("data-url") || "";
+      const mangaName = document.getElementById("inputManga").value.trim();
+      const chapter = document.getElementById("inputChapter").value.trim();
+      const domains = document.getElementById("inputDomains").value.split(",").map(d => d.trim()).filter(Boolean);
+
+      const btn = document.getElementById("btnUploadSubmit");
+      const alertBox = document.getElementById("uploadAlert");
+      const progressBar = document.getElementById("progressBar");
+      const progressFill = document.getElementById("progressFill");
+      const resultBox = document.getElementById("uploadResult");
+
+      btn.disabled = true;
+      btn.innerText = "⏳ Đang xử lý và mã hóa dữ liệu ảnh...";
+      alertBox.innerHTML = "";
+      progressBar.style.display = "block";
+      progressFill.style.width = "25%";
+
+      try {
+        // Đọc tất cả file sang base64
+        const filesPayload = [];
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          const b64 = await fileToBase64(file);
+          filesPayload.push({
+            name: file.name,
+            base64: b64
+          });
+          progressFill.style.width = `${25 + Math.round((i / selectedFiles.length) * 40)}%`;
+        }
+
+        btn.innerText = "🚀 Đang đẩy lên Netlify CDN & Kích hoạt 403 Shield...";
+        progressFill.style.width = "80%";
+
+        const res = await fetch("/api/admin/upload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            siteId,
+            siteUrl,
+            mangaName,
+            chapter,
+            allowedDomains: domains,
+            files: filesPayload
+          })
+        });
+
+        const data = await res.json();
+        progressFill.style.width = "100%";
+
+        if (res.ok && data.status === "success") {
+          resultBox.style.display = "block";
+          document.getElementById("resultTextarea").value = data.imageUrls.join("\n");
+          alertBox.innerHTML = `<div class="alert alert-success">✓ Đã đăng thành công ${data.totalImages} ảnh lên ${siteUrl}!</div>`;
+        } else {
+          alertBox.innerHTML = `<div class="alert alert-error">❌ Lỗi: ${data.message || "Tải lên thất bại"}</div>`;
+        }
+      } catch (err) {
+        alertBox.innerHTML = `<div class="alert alert-error">❌ Lỗi hệ thống: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "⚡ Tải Lên & Khóa Bảo Mật 403 Toàn Bộ Internet";
+        setTimeout(() => { progressBar.style.display = "none"; }, 1000);
+      }
+    }
+
+    function copyAllLinks() {
+      const textarea = document.getElementById("resultTextarea");
+      textarea.select();
+      document.execCommand("copy");
+      alert("✓ Đã copy toàn bộ link ảnh vào bộ nhớ tạm!");
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "jsonpic",
+  "version": "2.0.0",
+  "description": "JSONPic - High Security Manga CDN Storage & Admin Suite with Netlify Anti-Hotlink Protection",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "keywords": [
+    "manga",
+    "cdn",
+    "security",
+    "hotlink-protection",
+    "admin"
+  ],
+  "author": "Ho Duc Minh (Zhee Dev)",
+  "license": "ISC"
+}
