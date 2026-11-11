@@ -2,7 +2,8 @@
 
 > **Deploy URL:** [https://jsonpic.vercel.app](https://jsonpic.vercel.app)  
 > **Admin Dashboard:** [https://jsonpic.vercel.app/client/admin](https://jsonpic.vercel.app/client/admin)  
-> **Author:** Ho Duc Minh (Zhee Dev)
+> **Author:** Ho Duc Minh (Zhee Dev)  
+> 🤖 **Dành cho AI tiếp quản dự án:** Đọc chi tiết tại [AI_PROJECT_CONTEXT.md](file:///home/antigravity/zheedevVn/jsonpic/AI_PROJECT_CONTEXT.md)
 
 ---
 
@@ -22,3 +23,11 @@
    - **Anti-Dump**: Chặn khai thác ../, /etc/passwd, .env, .git...
    - **Anti-Map / Scanner**: Cắt đứt các tool dò quét nmap, nikto, wpscan, dirbuster...
    - **Brute-Force Shield**: Khóa IP sau 5 lần nhập sai mật khẩu.
+
+---
+
+## 🚀 Đẩy code & Deploy
+```bash
+git push origin main && git push gitlab main
+```
+*Vercel sẽ tự động deploy mỗi khi push code lên `gitlab main`.*
