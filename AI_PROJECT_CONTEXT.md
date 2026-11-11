@@ -86,7 +86,11 @@ Tệp `lib/security.js` phụ trách bảo vệ hệ sinh thái:
 Theo yêu cầu của người dùng:
 1. **Không hiển thị gợi ý (No suggestions/placeholders):**
    * Các input `inputManga`, `inputChapter`, `inputDomains`, `customIpInput` phải để `placeholder=""` và `value=""`.
-   * Luôn gắn `autocomplete="off"` và `spellcheck="false"` trên toàn bộ form và input để trình duyệt không xổ popup gợi ý lịch sử nhập.
+2. **Hỗ trợ Đăng Nhiều Thư Mục Độc Lập (Batch Multi-Folder Upload):**
+   * Hỗ trợ kéo thả đồng thời nhiều thư mục truyện từ Windows Explorer hoặc bấm nút `[📂 Chọn Thư Mục (Folder)]`.
+   * Hỗ trợ 2 chế độ:
+     - `multi_site`: Mỗi thư mục tự động tạo 1 Site Netlify riêng biệt (độc lập 100% về domain, CDN và băng thông).
+     - `single_site`: Gom các thư mục vào chung 1 site Netlify (mỗi thư mục giữ đường dẫn thư mục con riêng biệt).
 
 ---
 
