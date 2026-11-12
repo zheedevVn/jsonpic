@@ -1055,8 +1055,40 @@
       if (!str) return "";
       let s = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d");
       s = s.replace(/[^a-zA-Z0-9]+/g, " ").trim().toLowerCase();
+      // Loại bỏ các từ đuôi tên web thừa (Dâm Cô Nương...) để giữ trọn vẹn số Chương và số thứ tự (1), (2)...
+      s = s.replace(/\b(dam co nuong|dam co nuon|hentaivn|sayhentai|lxhentai)\b/g, " ").trim();
+
+      // Nếu có cấu trúc "... chuong X ..." kèm số thứ tự ở cuối (ví dụ: Chương 1 (1), Chương 1 (2))
+      const chapMatch = s.match(/^(.*?)\b(chuong|chap|tap|ch)\s+(\d+)(?:.*?\b(\d+))?$/);
+      if (chapMatch) {
+        const baseWords = chapMatch[1].trim().split(/\s+/).filter(Boolean);
+        let base = "";
+        for (const w of baseWords) {
+          if ((base + "-" + w).length > 40 && base.length > 0) break;
+          base = base ? `${base}-${w}` : w;
+        }
+        const prefix = chapMatch[2];
+        const mainNum = chapMatch[3];
+        const subNum = chapMatch[4];
+        if (base) {
+          return subNum ? `${base}-${prefix}-${mainNum}-${subNum}` : `${base}-${prefix}-${mainNum}`;
+        }
+      }
+
+      // Nếu có số thứ tự ở cuối chuỗi dài (ví dụ "(1)", "(2)")
+      const numMatch = s.match(/^(.*?)\s+(\d+)$/);
+      if (numMatch && s.length > 40) {
+        const baseWords = numMatch[1].trim().split(/\s+/).filter(Boolean);
+        let base = "";
+        for (const w of baseWords) {
+          if ((base + "-" + w).length > 42 && base.length > 0) break;
+          base = base ? `${base}-${w}` : w;
+        }
+        return `${base}-${numMatch[2]}`;
+      }
+
       const words = s.split(/\s+/).filter(w => w.length > 0);
-      const res = words.join("-").slice(0, 35).replace(/-+$/, "");
+      const res = words.join("-").slice(0, 75).replace(/-+$/, "");
       return res || ("manga-" + Math.random().toString(36).substring(2, 7));
     }
 
