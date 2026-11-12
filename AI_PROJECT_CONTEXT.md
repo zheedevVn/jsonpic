@@ -16,6 +16,10 @@
     * **Username:** `hoducminh`
     * **Password:** `minhhocgioi`
     * *Token sinh ra:* HMAC-SHA256 JWT có hiệu lực 24 giờ.
+* **Route 3: Kho Quản Lý Truyện & Chapter (`/client/admin/list`)**
+  * **Mục đích:** Giao diện thẻ trực quan lấy ra toàn bộ ảnh, truyện, chapter và giờ đăng.
+  * **Quy tắc cốt tử:** Sắp xếp theo thẻ truyện độc lập, các chapter của truyện nào nằm hoàn toàn trong truyện đó, **KHÔNG BAO GIỜ LỘN CHAPTER GIỮA CÁC TRUYỆN**.
+  * **API tương ứng:** `/api/admin/list` (hoặc `/api/admin/catalog`) trả về JSON phân cấp: `Story -> Chapter -> Images` kèm timestamp giờ đăng.
 
 ---
 

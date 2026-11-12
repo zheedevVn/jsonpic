@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/client/admin/list",
+      "destination": "/api/index.js?route=admin_list"
+    },
+    {
       "source": "/client/admin",
       "destination": "/api/index.js?route=admin"
     },

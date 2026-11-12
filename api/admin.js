@@ -10,7 +10,8 @@ const {
 const {
   listNetlifySites,
   createNetlifySite,
-  deployMangaToNetlify
+  deployMangaToNetlify,
+  getMangaCatalog
 } = require("../lib/netlify.js");
 const { getSettings, saveSettings } = require("../lib/db.js");
 
@@ -100,7 +101,7 @@ module.exports = async function handler(req, res) {
 
   // CÁC ROUTE TIẾP THEO YÊU CẦU TOKEN ADMIN
   const authHeader = req.headers.authorization || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const token = authHeader.replace(/^Bearer\s+/i, "") || url.searchParams.get("token") || "";
   const auth = verifyAdminToken(token);
 
   if (!auth) {
@@ -276,6 +277,17 @@ module.exports = async function handler(req, res) {
         allowedDomains: allAllowedDomains,
         imageUrls
       });
+    } catch (err) {
+      return sendJson(res, 500, { status: "error", message: err.message });
+    }
+  }
+
+  // ROUTE 7: Lấy toàn bộ danh sách truyện, chapter, ảnh và giờ đăng (/api/admin/list)
+  if (action === "list" || action === "catalog") {
+    try {
+      const siteId = url.searchParams.get("siteId") || "9cfd6ecc-b354-4abd-9c00-9c0659b25ed4";
+      const catalog = await getMangaCatalog(siteId);
+      return sendJson(res, 200, catalog);
     } catch (err) {
       return sendJson(res, 500, { status: "error", message: err.message });
     }

@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSONPic — Kho Quản Lý Truyện & Chapter Độc Lập</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050811;
+      --card-bg: rgba(13, 22, 41, 0.75);
+      --card-border: rgba(56, 189, 248, 0.2);
+      --primary: #00f2fe;
+      --primary-hover: #38bdf8;
+      --accent: #8b5cf6;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #34d399;
+      --danger: #f87171;
+      --warning: #fbbf24;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+        linear-gradient(to bottom, #050811, #0a0f1d);
+      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Header */
+    header {
+      background: rgba(10, 15, 29, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #00f2fe, #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: #050811;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.35);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: -0.5px;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #00f2fe, #0ea5e9);
+      color: #050811;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(0, 242, 254, 0.2);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0, 242, 254, 0.35);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-success {
+      background: rgba(52, 211, 153, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      box-shadow: none;
+    }
+
+    .btn-success:hover {
+      background: rgba(52, 211, 153, 0.25);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      box-shadow: none;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    /* Container */
+    .app-container {
+      max-width: 1300px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 20px 80px;
+      flex: 1;
+    }
+
+    /* Stats Overview */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      backdrop-filter: blur(12px);
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(0, 242, 254, 0.1);
+      border: 1px solid rgba(0, 242, 254, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      backdrop-filter: blur(12px);
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 280px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: rgba(5, 8, 17, 0.8);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px 16px 10px 40px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-box input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .select-control {
+      background: rgba(5, 8, 17, 0.8);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* STORY CARD (Thẻ Truyện Độc Lập) */
+    .story-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 22px;
+      backdrop-filter: blur(14px);
+      transition: all 0.2s ease;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .story-card:hover {
+      border-color: rgba(0, 242, 254, 0.4);
+    }
+
+    .story-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 16px;
+    }
+
+    .story-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .story-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+
+    .badge-primary {
+      background: rgba(0, 242, 254, 0.15);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      color: #38bdf8;
+    }
+
+    .badge-success {
+      background: rgba(52, 211, 153, 0.15);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: #34d399;
+    }
+
+    .badge-purple {
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: #c084fc;
+    }
+
+    .story-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .story-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* CHAPTER SUB-CARD (Từng Chapter Riêng Biệt - Không Lộn) */
+    .chapter-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .chapter-card {
+      background: rgba(5, 8, 17, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-left: 4px solid #00f2fe;
+      border-radius: 10px;
+      padding: 16px;
+      transition: all 0.2s;
+    }
+
+    .chapter-card:hover {
+      border-color: rgba(56, 189, 248, 0.35);
+      border-left-color: #38bdf8;
+    }
+
+    .chapter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chapter-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chapter-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chapter-time {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chapter-buttons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* Grid Thumbnail Ảnh */
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+
+    .image-thumb-card {
+      position: relative;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 3 / 4;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .image-thumb-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary);
+      box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+    }
+
+    .image-thumb-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .image-thumb-idx {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      color: #34d399;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* Textarea URL */
+    .links-textarea-box {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+
+    .links-textarea {
+      width: 100%;
+      background: #040711;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #a5f3fc;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      resize: vertical;
+      outline: none;
+    }
+
+    /* Lightbox Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      max-width: 90vw;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .modal-content img {
+      max-width: 100%;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 0 40px rgba(0, 242, 254, 0.2);
+    }
+
+    .modal-caption {
+      margin-top: 12px;
+      color: #fff;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: -40px;
+      right: 0;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #fff;
+      font-size: 1.8rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(13, 22, 41, 0.95);
+      border: 1px solid #34d399;
+      color: #34d399;
+      padding: 12px 20px;
+      border-radius: 10px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      z-index: 2000;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Login Modal for unauthenticated access */
+    .login-container {
+      max-width: 440px;
+      margin: 80px auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 242, 254, 0.1);
+      backdrop-filter: blur(20px);
+      text-align: center;
+    }
+
+    .login-icon {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 20px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(139, 92, 246, 0.2));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    .form-group {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+    }
+
+    .form-control {
+      width: 100%;
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <a href="/client/admin" class="brand">
+      <div class="brand-logo">JP</div>
+      <div>
+        <div class="brand-title">JSONPic Studio</div>
+        <div class="brand-subtitle">Kho Truyện & Toàn Bộ Ảnh (Manga & Chapter Explorer)</div>
+      </div>
+    </a>
+
+    <div class="header-nav">
+      <a href="/client/admin" class="btn btn-secondary">⚡ Tải Truyện Mới</a>
+      <a href="/client/admin/list" class="btn" style="box-shadow: 0 0 15px rgba(0,242,254,0.4);">📚 Kho Truyện & Ảnh</a>
+      <div id="userBadge" style="display: none; align-items: center; gap: 8px;">
+        <span class="badge badge-primary">Super Admin</span>
+        <button class="btn btn-danger" style="padding: 5px 12px; font-size: 0.75rem;" onclick="logout()">Thoát</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-container">
+
+    <!-- LOGIN SECTION (Hiển thị nếu chưa đăng nhập) -->
+    <div id="loginSection" class="login-container" style="display: none;">
+      <div class="login-icon">🛡️</div>
+      <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 8px;">Xác Thực Quyền Xem Kho Truyện</h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Đăng nhập để xem toàn bộ truyện, chapter và copy link ảnh trực tiếp</p>
+      
+      <div id="loginAlert" style="margin-bottom: 14px; font-size: 0.85rem;"></div>
+
+      <form onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Tài khoản</label>
+          <input type="text" id="loginUser" class="form-control" placeholder="" required autocomplete="off" spellcheck="false">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mật khẩu</label>
+          <input type="password" id="loginPass" class="form-control" placeholder="" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn" style="width: 100%; justify-content: center; padding: 12px;">
+          ⚡ Đăng Nhập Xem Kho Truyện
+        </button>
+      </form>
+    </div>
+
+    <!-- MAIN CATALOG DASHBOARD -->
+    <div id="mainDashboard" style="display: none;">
+
+      <!-- Thống kê tổng quan -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📖</div>
+          <div>
+            <div class="stat-value" id="statStories">0</div>
+            <div class="stat-label">Tổng Số Bộ Truyện</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.25);">📑</div>
+          <div>
+            <div class="stat-value" id="statChapters" style="color: #c084fc;">0</div>
+            <div class="stat-label">Tổng Số Chapters (Tách Rời)</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(52, 211, 153, 0.1); border-color: rgba(52, 211, 153, 0.25);">🖼️</div>
+          <div>
+            <div class="stat-value" id="statImages" style="color: #34d399;">0</div>
+            <div class="stat-label">Tổng Số Ảnh CDN</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.25);">🛡️</div>
+          <div>
+            <div class="stat-value" style="color: #fbbf24; font-size: 1.15rem;">403 Active</div>
+            <div class="stat-label">Bảo Vệ Hotlink Toàn Diện</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls & Bộ Lọc -->
+      <div class="controls-bar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên truyện, slug, chapter hoặc ngày đăng..." oninput="handleFilter()">
+        </div>
+
+        <div class="filter-group">
+          <select id="filterType" class="select-control" onchange="handleFilter()">
+            <option value="all">Tất Cả Bộ Truyện</option>
+            <option value="clean" selected>Chỉ Bộ Chuẩn (Clean Slug)</option>
+            <option value="legacy">Thư Mục Gốc Chưa Đổi Slug</option>
+          </select>
+
+          <select id="sortType" class="select-control" onchange="handleFilter()">
+            <option value="newest">📅 Mới nhất trước</option>
+            <option value="oldest">⏳ Cũ nhất trước</option>
+            <option value="most_images">📊 Nhiều ảnh nhất</option>
+            <option value="title_asc">🔤 Tên A - Z</option>
+          </select>
+
+          <button class="btn btn-secondary" onclick="loadCatalog(true)" id="btnRefresh">
+            🔄 Quét Lại CDN
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingIndicator" style="text-align: center; padding: 50px 20px;">
+        <div style="font-size: 2rem; margin-bottom: 12px; animation: spin 1.5s infinite linear;">⏳</div>
+        <h3 style="font-weight: 700; color: #38bdf8;">Đang kết nối & quét danh mục ảnh từ cdnjsonhentai...</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 6px;">Tự động phân tách từng bộ truyện và từng chapter riêng biệt</p>
+      </div>
+
+      <!-- DANH SÁCH THẺ TRUYỆN & CHAPTER -->
+      <div id="storiesContainer"></div>
+
+    </div>
+
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightboxModal" class="modal-overlay" onclick="closeLightbox(event)">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeLightbox(event)">×</button>
+      <img id="lightboxImg" src="" alt="Zoom">
+      <div class="modal-caption" id="lightboxCaption"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast">
+    <span>✓</span>
+    <span id="toastMsg">Đã sao chép vào bộ nhớ tạm!</span>
+  </div>
+
+  <script>
+    let rawStories = [];
+    let currentFiltered = [];
+    let authToken = localStorage.getItem("admin_token") || "";
+
+    // Định dạng ngày giờ chuẩn Việt Nam
+    function formatTime(isoString) {
+      if (!isoString) return "Mới đây";
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleString("vi-VN", {
+          timeZone: "Asia/Ho_Chi_Minh",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+      } catch (e) {
+        return isoString;
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      const toastMsg = document.getElementById("toastMsg");
+      toastMsg.innerText = msg;
+      toast.style.display = "flex";
+      setTimeout(() => { toast.style.display = "none"; }, 2500);
+    }
+
+    function copyText(text, successMsg) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(successMsg || "✓ Đã sao chép vào bộ nhớ tạm!");
+      }).catch(() => {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast(successMsg || "✓ Đã sao chép vào bộ nhớ tạm!");
+      });
+    }
+
+    // Kiểm tra đăng nhập khi mở trang
+    async function checkAuth() {
+      if (!authToken) {
+        document.getElementById("loginSection").style.display = "block";
+        document.getElementById("mainDashboard").style.display = "none";
+        document.getElementById("userBadge").style.display = "none";
+        return;
+      }
+
+      document.getElementById("loginSection").style.display = "none";
+      document.getElementById("mainDashboard").style.display = "block";
+      document.getElementById("userBadge").style.display = "inline-flex";
+      loadCatalog();
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById("loginUser").value.trim();
+      const p = document.getElementById("loginPass").value.trim();
+      const alertBox = document.getElementById("loginAlert");
+
+      try {
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (res.ok && data.status === "success") {
+          authToken = data.token;
+          localStorage.setItem("admin_token", data.token);
+          checkAuth();
+        } else {
+          alertBox.innerHTML = `<span style="color: #f87171; font-weight: 700;">❌ ${data.message || "Đăng nhập thất bại"}</span>`;
+        }
+      } catch (err) {
+        alertBox.innerHTML = `<span style="color: #f87171; font-weight: 700;">❌ Lỗi kết nối: ${err.message}</span>`;
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("admin_token");
+      authToken = "";
+      location.reload();
+    }
+
+    // Tải danh mục truyện từ API
+    async function loadCatalog(forceRefresh = false) {
+      const loader = document.getElementById("loadingIndicator");
+      const container = document.getElementById("storiesContainer");
+      const btnRefresh = document.getElementById("btnRefresh");
+
+      loader.style.display = "block";
+      btnRefresh.disabled = true;
+      btnRefresh.innerText = "⏳ Đang quét...";
+
+      try {
+        const url = `/api/admin/list?token=${encodeURIComponent(authToken)}${forceRefresh ? '&refresh=1' : ''}`;
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+
+        if (res.status === 401) {
+          logout();
+          return;
+        }
+
+        const data = await res.json();
+        if (data.status === "success") {
+          rawStories = data.stories || [];
+
+          // Cập nhật thống kê
+          document.getElementById("statStories").innerText = data.total_stories;
+          document.getElementById("statChapters").innerText = data.total_chapters;
+          document.getElementById("statImages").innerText = data.total_images.toLocaleString();
+
+          handleFilter();
+        } else {
+          container.innerHTML = `<div style="text-align: center; padding: 40px; color: #f87171;">❌ Lỗi tải dữ liệu: ${data.message}</div>`;
+        }
+      } catch (err) {
+        container.innerHTML = `<div style="text-align: center; padding: 40px; color: #f87171;">❌ Không thể kết nối tới server: ${err.message}</div>`;
+      } finally {
+        loader.style.display = "none";
+        btnRefresh.disabled = false;
+        btnRefresh.innerText = "🔄 Quét Lại CDN";
+      }
+    }
+
+    // Xử lý bộ lọc và tìm kiếm
+    function handleFilter() {
+      const query = (document.getElementById("searchInput").value || "").toLowerCase().trim();
+      const filterType = document.getElementById("filterType").value;
+      const sortType = document.getElementById("sortType").value;
+
+      let list = [...rawStories];
+
+      // 1. Lọc loại truyện (Chuẩn hay Legacy)
+      if (filterType === "clean") {
+        list = list.filter(s => s.is_clean_slug);
+      } else if (filterType === "legacy") {
+        list = list.filter(s => !s.is_clean_slug);
+      }
+
+      // 2. Lọc theo từ khóa tìm kiếm
+      if (query) {
+        list = list.filter(s => {
+          const matchTitle = (s.title || "").toLowerCase().includes(query);
+          const matchSlug = (s.slug || "").toLowerCase().includes(query);
+          const matchChap = s.chapters.some(c => (c.chapter_name || "").toLowerCase().includes(query));
+          const matchDate = formatTime(s.created_at).toLowerCase().includes(query);
+          return matchTitle || matchSlug || matchChap || matchDate;
+        });
+      }
+
+      // 3. Sắp xếp
+      if (sortType === "newest") {
+        list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      } else if (sortType === "oldest") {
+        list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      } else if (sortType === "most_images") {
+        list.sort((a, b) => b.total_images - a.total_images);
+      } else if (sortType === "title_asc") {
+        list.sort((a, b) => a.title.localeCompare(b.title));
+      }
+
+      currentFiltered = list;
+      renderStories(list);
+    }
+
+    // RENDER DANH SÁCH THẺ TRUYỆN & CHAPTER (Không Bao Giờ Bị Lộn Chapter)
+    function renderStories(stories) {
+      const container = document.getElementById("storiesContainer");
+      if (!stories || stories.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 50px 20px; background: var(--card-bg); border-radius: var(--radius); border: 1px dashed var(--card-border);">
+            <div style="font-size: 2rem; margin-bottom: 10px;">🔍</div>
+            <h4 style="color: #fff; font-size: 1.1rem;">Không tìm thấy bộ truyện nào khớp với bộ lọc!</h4>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 6px;">Thử đổi từ khóa tìm kiếm hoặc chọn "Tất Cả Bộ Truyện"</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = stories.map((story, sIdx) => {
+        const timeFormatted = formatTime(story.created_at);
+        const allStoryImages = story.chapters.flatMap(c => c.images);
+
+        // Tạo danh sách thẻ từng chapter riêng biệt (Cách ly hoàn toàn trong truyện này)
+        const chaptersHtml = story.chapters.map((chap, cIdx) => {
+          const chapTime = formatTime(chap.created_at || story.created_at);
+          const chapImagesText = chap.images.join("\n");
+          const cardId = `story_${sIdx}_chap_${cIdx}`;
+
+          // Thumbnail ảnh xem trước (giới hạn 12 ảnh đầu, có nút xem toàn bộ)
+          const thumbsHtml = chap.images.map((imgUrl, iIdx) => {
+            const fileName = imgUrl.split("/").pop();
+            return `
+              <div class="image-thumb-card" onclick="openLightbox('${imgUrl}', '${story.title} - ${chap.chapter_name} (#${iIdx + 1})')">
+                <span class="image-thumb-idx">#${iIdx + 1}</span>
+                <img src="${imgUrl}" loading="lazy" alt="${fileName}">
+              </div>
+            `;
+          }).join("");
+
+          return `
+            <div class="chapter-card">
+              <div class="chapter-header">
+                <div class="chapter-info">
+                  <div class="chapter-name">
+                    <span>📑</span>
+                    <span>${chap.chapter_name}</span>
+                  </div>
+                  <span class="badge badge-purple">${chap.total_images} ảnh</span>
+                  <div class="chapter-time">
+                    <span>⏰ Giờ đăng:</span>
+                    <strong style="color: #e2e8f0;">${chapTime}</strong>
+                  </div>
+                </div>
+
+                <div class="chapter-buttons">
+                  <button type="button" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="copyText('${chap.images.join("\\n")}', '✓ Đã sao chép ${chap.total_images} link ảnh của ${story.title} - ${chap.chapter_name}!')">
+                    📋 Sao Chép ${chap.total_images} Link Ảnh
+                  </button>
+                  <button type="button" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="toggleElement('thumbs_${cardId}')">
+                    👁️ Xem Ảnh (${chap.total_images})
+                  </button>
+                  <button type="button" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="toggleElement('links_${cardId}')">
+                    📝 Xem Ô Text
+                  </button>
+                </div>
+              </div>
+
+              <!-- Lưới xem ảnh thumbnail thu nhỏ -->
+              <div id="thumbs_${cardId}" class="image-grid" style="display: none;">
+                ${thumbsHtml}
+              </div>
+
+              <!-- Khung ô Textarea chứa toàn bộ link ảnh của chapter -->
+              <div id="links_${cardId}" class="links-textarea-box" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Danh sách URL ảnh trực tiếp của <strong>${chap.chapter_name}</strong>:</span>
+                  <button type="button" class="btn btn-secondary" style="padding: 3px 8px; font-size: 0.7rem;" onclick="copyText('${chap.images.join("\\n")}', '✓ Đã sao chép toàn bộ link chapter!')">📋 Copy Toàn Bộ</button>
+                </div>
+                <textarea class="links-textarea mono" rows="5" readonly>${chapImagesText}</textarea>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        return `
+          <div class="story-card" id="story_card_${sIdx}">
+            <div class="story-header">
+              <div>
+                <div class="story-title-row">
+                  <span style="font-size: 1.3rem;">📖</span>
+                  <span class="story-title">${story.title}</span>
+                  ${story.is_clean_slug 
+                    ? '<span class="badge badge-success">✓ Chuẩn Slug CDN</span>' 
+                    : '<span class="badge badge-primary">📁 Thư Mục Gốc</span>'}
+                  <span class="badge badge-primary mono">slug: ${story.slug}</span>
+                </div>
+                <div class="story-meta">
+                  <span>📦 <strong>${story.total_chapters} Chapter</strong></span>
+                  <span>🖼️ <strong>${story.total_images} Ảnh</strong></span>
+                  <span>⏰ Giờ cập nhật: <strong style="color: #34d399;">${timeFormatted}</strong></span>
+                  <span>🌐 JSON API: <a href="${story.json_url}" target="_blank" class="mono" style="color: #38bdf8; text-decoration: underline;">${story.slug}.json</a></span>
+                </div>
+              </div>
+
+              <div class="story-actions">
+                <a href="${story.json_url}" target="_blank" class="btn" style="padding: 7px 14px; font-size: 0.8rem;">
+                  ⚡ Mở Link JSON
+                </a>
+                <button type="button" class="btn btn-secondary" style="padding: 7px 14px; font-size: 0.8rem;" onclick="copyText('${story.json_url}', '✓ Đã sao chép link JSON của bộ ${story.title}!')">
+                  📋 Copy Link JSON
+                </button>
+                <button type="button" class="btn btn-secondary" style="padding: 7px 14px; font-size: 0.8rem;" onclick="copyText('${allStoryImages.join("\\n")}', '✓ Đã sao chép toàn bộ ${story.total_images} link ảnh của bộ ${story.title}!')">
+                  📋 Copy Toàn Bộ Link Ảnh Cả Bộ
+                </button>
+                <button type="button" class="btn btn-secondary" style="padding: 7px 14px; font-size: 0.8rem;" onclick="toggleElement('chap_list_${sIdx}')">
+                  🔽 Thu Gọn / Mở
+                </button>
+              </div>
+            </div>
+
+            <!-- DANH SÁCH CHAPTER NẰM HOÀN TOÀN TRONG THẺ CỦA BỘ NÀY -->
+            <div id="chap_list_${sIdx}" class="chapter-container">
+              ${chaptersHtml}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function toggleElement(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.display = el.style.display === "none" ? "grid" : "none";
+        if (el.tagName === "DIV" && el.classList.contains("chapter-container")) {
+          el.style.display = el.style.display === "none" ? "flex" : "none";
+        }
+      }
+    }
+
+    // Lightbox modal preview
+    function openLightbox(url, caption) {
+      const modal = document.getElementById("lightboxModal");
+      const img = document.getElementById("lightboxImg");
+      const cap = document.getElementById("lightboxCaption");
+      img.src = url;
+      cap.innerText = caption;
+      modal.classList.add("active");
+    }
+
+    function closeLightbox(e) {
+      if (e.target.id === "lightboxModal" || e.target.classList.contains("modal-close")) {
+        document.getElementById("lightboxModal").classList.remove("active");
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        document.getElementById("lightboxModal").classList.remove("active");
+      }
+    });
+
+    // Chạy khi khởi động trang
+    checkAuth();
+  </script>
+</body>
+</html>

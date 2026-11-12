@@ -28,7 +28,22 @@ module.exports = async function handler(req, res) {
   const pathname = url.pathname;
   const route = url.searchParams.get("route");
 
-  // ROUTE 1: /client/admin -> Hiển thị Giao diện Admin Panel
+  // ROUTE 1: /client/admin/list -> Hiển thị Giao diện Kho Truyện & Toàn Bộ Ảnh
+  if (pathname === "/client/admin/list" || route === "admin_list") {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+    const htmlPath = path.join(__dirname, "../public/list.html");
+    if (fs.existsSync(htmlPath)) {
+      return res.end(fs.readFileSync(htmlPath, "utf8"));
+    } else {
+      return res.end("<h1>Manga List is loading...</h1>");
+    }
+  }
+
+  // ROUTE 2: /client/admin -> Hiển thị Giao diện Admin Panel
   if (pathname === "/client/admin" || route === "admin") {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("X-Frame-Options", "DENY");
