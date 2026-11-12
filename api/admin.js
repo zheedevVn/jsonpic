@@ -11,7 +11,9 @@ const {
   listNetlifySites,
   createNetlifySite,
   deployMangaToNetlify,
-  getMangaCatalog
+  getMangaCatalog,
+  getExistingSlugs,
+  checkSlugExists
 } = require("../lib/netlify.js");
 const { getSettings, saveSettings } = require("../lib/db.js");
 
@@ -184,10 +186,23 @@ module.exports = async function handler(req, res) {
     if (req.method !== "POST") return sendJson(res, 405, { status: "error", message: "Method Not Allowed" });
 
     const body = await parseBody(req);
-    const { siteId, siteUrl, mangaName, chapter, files, allowedDomains, customIps } = body;
+    const { siteId, siteUrl, mangaName, chapter, files, allowedDomains, customIps, isFirstChunk, allowOverwrite } = body;
 
     if (!siteId || !files || !Array.isArray(files) || files.length === 0) {
       return sendJson(res, 400, { status: "error", message: "Thiếu siteId hoặc danh sách file ảnh!" });
+    }
+
+    // Kiểm tra trùng Action / Slug trên CDN (Ảnh có thể trùng tên nhưng Action tuyệt đối không được trùng)
+    const targetSlug = cleanSlug(mangaName);
+    if (isFirstChunk && !allowOverwrite && targetSlug) {
+      const isDuplicate = await checkSlugExists(siteId || "9cfd6ecc-b354-4abd-9c00-9c0659b25ed4", targetSlug);
+      if (isDuplicate) {
+        return sendJson(res, 409, {
+          status: "error",
+          code: "DUPLICATE_ACTION_SLUG",
+          message: `❌ LỖI BẢO VỆ DỮ LIỆU: Action/Link 'upload/${targetSlug}' đã tồn tại trên CDN! Ảnh thì có thể trùng tên chứ cái Action tuyệt đối không bao giờ được trùng. Vui lòng đổi lại Tên Truyện hoặc Chuỗi Slug khác để không làm mất ảnh cũ!`
+        });
+      }
     }
 
     const settings = getSettings();
@@ -288,6 +303,17 @@ module.exports = async function handler(req, res) {
       const siteId = url.searchParams.get("siteId") || "9cfd6ecc-b354-4abd-9c00-9c0659b25ed4";
       const catalog = await getMangaCatalog(siteId);
       return sendJson(res, 200, catalog);
+    } catch (err) {
+      return sendJson(res, 500, { status: "error", message: err.message });
+    }
+  }
+
+  // ROUTE 8: Lấy danh sách các slug đã có sẵn trên CDN để kiểm tra trùng Action (/api/admin/slugs)
+  if (action === "slugs") {
+    try {
+      const siteId = url.searchParams.get("siteId") || "9cfd6ecc-b354-4abd-9c00-9c0659b25ed4";
+      const slugs = await getExistingSlugs(siteId);
+      return sendJson(res, 200, { status: "success", slugs });
     } catch (err) {
       return sendJson(res, 500, { status: "error", message: err.message });
     }

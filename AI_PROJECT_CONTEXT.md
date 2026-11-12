@@ -107,6 +107,15 @@ Theo yêu cầu của người dùng:
      - Người dùng upload tên truyện có thể chứa ký tự đặc biệt, dấu tiếng Việt hoặc lỗi font Windows-1252/mojibake (`Ch¦¦¦íng`, `D+óm`, nhiều dấu cách liên tiếp). Nếu để nguyên thì link sẽ bị 404 Not Found trên trình duyệt hoặc CDN.
      - Hệ thống sử dụng hàm `cleanSlug(str)` để tự động chuẩn hóa mọi tên truyện thành chuỗi ký tự sạch không dấu, viết thường, ngăn cách bằng dấu gạch ngang (`a-z0-9-`) (ví dụ: `naruto`, `ai-peak`, `anh-gia-su`).
      - Trên giao diện `/client/admin`, trường "Chuỗi Slug URL" được tự động điền sẵn và cho phép chỉnh sửa nếu muốn.
+   * **Cơ Chế Chặn Trùng Action / Link Có Sẵn (Duplicate Action Defense):**
+     - **Quy tắc cốt tử:** Ảnh có thể trùng tên (`0001.webp`, `0002.webp`), nhưng **Action / Chuỗi Slug / Link tuyệt đối không bao giờ được trùng**!
+     - Hệ thống kiểm tra 2 tầng:
+       - *Tầng 1 (Frontend):* Đối chiếu chuỗi slug với toàn bộ slug đã có sẵn trên CDN (`existingCdnSlugs`) và các card trong cùng đợt tải. Nếu trùng, lập tức đổi viền đỏ/vàng kèm thông báo lỗi và chặn nút tải lên, yêu cầu người dùng đổi lại tên hoặc slug.
+       - *Tầng 2 (Backend):* Endpoint `/api/admin/upload` kiểm tra deploy gần nhất của Netlify, nếu slug đã tồn tại thì trả về mã lỗi `HTTP 409 Conflict (DUPLICATE_ACTION_SLUG)` để bảo vệ 100% không cho phép ghi đè mất ảnh cũ.
+   * **Hệ Thống Thông Báo Sau Khi Đăng Xong:**
+     - Phát chuông âm thanh (Audio Chime) khi hoàn tất tải ảnh.
+     - Bật popup chúc mừng hoàn tất kèm đầy đủ: Tên truyện, Số lượng ảnh, Link JSON, Nút copy nhanh và liên kết sang `/client/admin/list`.
+     - Gửi Desktop Notification trên trình duyệt.
    * Tự động batching thành các đợt tối đa 15 ảnh để không bao giờ bị dính lỗi `413 Payload Too Large` của Vercel Serverless (4.5MB limit).
 
 ---

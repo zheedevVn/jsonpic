@@ -348,6 +348,34 @@
       box-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
     }
 
+    .slug-alert-box {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    .slug-alert-error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+    .slug-alert-warning {
+      background: rgba(251, 191, 36, 0.15);
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      color: #fde68a;
+    }
+    .slug-alert-success {
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: #6ee7b7;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
     .preview-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
@@ -835,9 +863,27 @@
       document.getElementById(tabId).classList.add("active");
     }
 
+    let existingCdnSlugs = new Set();
+
     async function loadAdminData() {
       loadSites();
       loadIpWhitelist();
+      fetchExistingSlugs();
+    }
+
+    async function fetchExistingSlugs() {
+      try {
+        const res = await fetch(`/api/admin/slugs?token=${encodeURIComponent(authToken)}`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        const data = await res.json();
+        if (data.status === "success" && Array.isArray(data.slugs)) {
+          existingCdnSlugs = new Set(data.slugs.map(s => s.toLowerCase().trim()));
+          if (typeof validateAllActionSlugs === "function") {
+            validateAllActionSlugs();
+          }
+        }
+      } catch(e) {}
     }
 
     async function loadSites() {
@@ -1131,7 +1177,7 @@
         batchContainer.style.display = "block";
         countEl.innerText = detectedFolders.size;
         listEl.innerHTML = "";
-        btnMainSubmit.style.display = "none"; // Ẩn nút gộp chung cũ để tách riêng từng action!
+        btnMainSubmit.style.display = "none";
         document.getElementById("previewContainer").style.display = "none";
 
         let index = 0;
@@ -1140,20 +1186,23 @@
           const autoSlug = cleanSlug(folderName);
           const card = document.createElement("div");
           card.className = "manga-action-card";
-          card.style.cssText = "background: rgba(13, 22, 41, 0.85); border: 1px solid rgba(0, 242, 254, 0.25); border-radius: 12px; padding: 16px; margin-bottom: 14px;";
+          card.id = `manga_card_${idx}`;
+          card.style.cssText = "background: rgba(13, 22, 41, 0.85); border: 1px solid rgba(0, 242, 254, 0.25); border-radius: 12px; padding: 16px; margin-bottom: 14px; transition: border-color 0.25s;";
           card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
               <div style="flex: 1; min-width: 280px;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                   <span style="font-size: 1.1rem;">📖</span>
                   <strong style="color: #38bdf8; font-size: 0.9rem; min-width: 120px;">Tên Gốc / Thư Mục:</strong>
-                  <input type="text" id="manga_title_${idx}" value="${folderName}" oninput="const s = cleanSlug(this.value); document.getElementById('manga_slug_${idx}').value = s; document.getElementById('preview_slug_${idx}').innerText = s;" class="form-control" style="font-weight: 600; color: #fff; background: rgba(0,0,0,0.5); padding: 6px 12px; font-size: 0.9rem; flex: 1;" placeholder="" autocomplete="off" spellcheck="false">
+                  <input type="text" id="manga_title_${idx}" value="${folderName}" oninput="const s = cleanSlug(this.value); document.getElementById('manga_slug_${idx}').value = s; document.getElementById('preview_slug_${idx}').innerText = s; validateAllActionSlugs();" class="form-control" style="font-weight: 600; color: #fff; background: rgba(0,0,0,0.5); padding: 6px 12px; font-size: 0.9rem; flex: 1;" placeholder="" autocomplete="off" spellcheck="false">
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                   <span style="font-size: 1.1rem;">🔗</span>
                   <strong style="color: #34d399; font-size: 0.9rem; min-width: 120px;">Chuỗi Slug URL:</strong>
-                  <input type="text" id="manga_slug_${idx}" value="${autoSlug}" oninput="document.getElementById('preview_slug_${idx}').innerText = cleanSlug(this.value);" class="form-control mono" style="font-weight: 700; color: #a5f3fc; background: rgba(0,0,0,0.7); padding: 6px 12px; font-size: 0.9rem; flex: 1;" placeholder="chuoi-slug-khong-dau" autocomplete="off" spellcheck="false">
+                  <input type="text" id="manga_slug_${idx}" value="${autoSlug}" oninput="document.getElementById('preview_slug_${idx}').innerText = cleanSlug(this.value); validateAllActionSlugs();" class="form-control mono" style="font-weight: 700; color: #a5f3fc; background: rgba(0,0,0,0.7); padding: 6px 12px; font-size: 0.9rem; flex: 1;" placeholder="chuoi-slug-khong-dau" autocomplete="off" spellcheck="false">
                 </div>
+                <!-- Banner cảnh báo kiểm tra trùng Action / Link -->
+                <div id="slug_warn_${idx}" class="slug-alert-box" style="display: none;"></div>
                 <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 6px;">
                   📦 Số lượng: <strong style="color: #34d399;">${items.length} ảnh</strong> | 
                   🌐 Link Danh Sách JSON: <span class="mono" style="color: #38bdf8;">http://cdnjsonhentai.netlify.app/upload/<span id="preview_slug_${idx}">${autoSlug}</span>.json</span>
@@ -1195,10 +1244,65 @@
           listEl.appendChild(card);
         });
 
+        validateAllActionSlugs();
       } else {
         batchContainer.style.display = "none";
         btnMainSubmit.style.display = "flex";
         renderPreviews();
+      }
+    }
+
+    // Kiểm tra và cảnh báo trùng Action / Slug trong thời gian thực
+    function validateAllActionSlugs() {
+      const slugCounts = new Map();
+      const totalCards = detectedFolders.size;
+
+      // 1. Đếm tần suất xuất hiện của từng slug trong lượt tải hiện tại
+      for (let i = 0; i < totalCards; i++) {
+        const slugInput = document.getElementById(`manga_slug_${i}`);
+        if (!slugInput) continue;
+        const slug = cleanSlug(slugInput.value.trim());
+        if (!slug) continue;
+        slugCounts.set(slug, (slugCounts.get(slug) || 0) + 1);
+      }
+
+      // 2. Kiểm tra từng card đối chiếu với CDN và nội bộ batch
+      for (let i = 0; i < totalCards; i++) {
+        const slugInput = document.getElementById(`manga_slug_${i}`);
+        const warnBox = document.getElementById(`slug_warn_${i}`);
+        const cardEl = document.getElementById(`manga_card_${i}`);
+        const btnUpload = document.getElementById(`btn_upload_manga_${i}`);
+        if (!slugInput || !warnBox) continue;
+
+        const slug = cleanSlug(slugInput.value.trim());
+        const isCdnDuplicate = existingCdnSlugs.has(slug);
+        const isBatchDuplicate = (slugCounts.get(slug) || 0) > 1;
+
+        if (isCdnDuplicate) {
+          warnBox.style.display = "block";
+          warnBox.className = "slug-alert-box slug-alert-error";
+          warnBox.innerHTML = `❌ <strong>LỖI TRÙNG ACTION / LINK CÓ SẴN:</strong> Thư mục <code>upload/${slug}</code> đã tồn tại trên CDN cdnjsonhentai! Ảnh có thể trùng tên chứ Action tuyệt đối không được trùng. Hãy đổi lại Tên Truyện hoặc Chuỗi Slug khác để không bị ghi đè mất ảnh cũ!`;
+          if (cardEl) cardEl.style.borderColor = "#f87171";
+          if (btnUpload) {
+            btnUpload.classList.add("btn-danger");
+          }
+        } else if (isBatchDuplicate) {
+          warnBox.style.display = "block";
+          warnBox.className = "slug-alert-box slug-alert-warning";
+          warnBox.innerHTML = `⚠️ <strong>CẢNH BÁO TRÙNG ACTION:</strong> Chuỗi <code>upload/${slug}</code> đang bị trùng với một bộ khác trong danh sách này! Hãy đổi tên để các bộ không bị dồn chung.`;
+          if (cardEl) cardEl.style.borderColor = "#fbbf24";
+          if (btnUpload) {
+            btnUpload.classList.remove("btn-danger");
+          }
+        } else {
+          warnBox.style.display = "block";
+          warnBox.className = "slug-alert-box slug-alert-success";
+          warnBox.innerHTML = `✓ Action & Slug hợp lệ: <code>http://cdnjsonhentai.netlify.app/upload/${slug}</code> (Chưa có trên CDN, an toàn 100%)`;
+          if (cardEl) cardEl.style.borderColor = "rgba(0, 242, 254, 0.25)";
+          if (btnUpload) {
+            btnUpload.classList.remove("btn-danger");
+          }
+        }
       }
     }
 
@@ -1219,13 +1323,23 @@
     // Tải riêng từng bộ truyện độc lập
     async function uploadSingleMangaFolder(idx, originalFolderName) {
       const items = detectedFolders.get(originalFolderName);
-      if (!items || items.length === 0) return;
+      if (!items || items.length === 0) return false;
 
       const mangaSlugInput = document.getElementById(`manga_slug_${idx}`);
       const mangaTitleInput = document.getElementById(`manga_title_${idx}`);
       const rawSlug = mangaSlugInput ? mangaSlugInput.value.trim() : "";
       const rawTitle = mangaTitleInput ? mangaTitleInput.value.trim() : "";
       const finalSlug = cleanSlug(rawSlug || rawTitle || originalFolderName);
+
+      // 1. Kiểm tra chặn trùng Action / Link ngay tại client
+      if (existingCdnSlugs.has(finalSlug)) {
+        alert(`❌ LỖI TRÙNG ACTION / LINK CÓ SẴN!\n\nThư mục 'upload/${finalSlug}' đã tồn tại trên CDN cdnjsonhentai!\nẢnh thì có thể trùng tên chứ cái Action tuyệt đối không bao giờ được trùng.\n\nVui lòng đổi lại Tên Truyện hoặc Chuỗi Slug khác trước khi tải lên!`);
+        if (mangaSlugInput) {
+          mangaSlugInput.focus();
+          mangaSlugInput.select();
+        }
+        return false;
+      }
 
       const domainsInput = document.getElementById("inputDomains");
       const domains = domainsInput ? domainsInput.value.split(",").map(d => d.trim()).filter(Boolean) : [];
@@ -1276,6 +1390,7 @@
               mangaName: finalSlug,
               chapter: "",
               allowedDomains: domains,
+              isFirstChunk: (i === 0),
               files: chunkPayload
             })
           });
@@ -1301,8 +1416,30 @@
           };
         }
         textarea.value = allUploadedUrls.join("\n");
+
+        // Cập nhật slug vào danh sách đã tồn tại
+        existingCdnSlugs.add(finalSlug);
+        validateAllActionSlugs();
+
+        // 🔔 THÔNG BÁO HOÀN TẤT ĐĂNG TRUYỆN CHO NGƯỜI DÙNG BIẾT
+        playSuccessChime();
+        sendDesktopNotification(
+          "JSONPic CDN: Tải Lên Thành Công!",
+          `Đã đăng xong bộ truyện ${rawTitle || finalSlug} (${allUploadedUrls.length} ảnh) lên cdnjsonhentai!`
+        );
+        showUploadSuccessModal({
+          mangaName: rawTitle || finalSlug,
+          slug: finalSlug,
+          totalImages: allUploadedUrls.length,
+          jsonUrl: finalJsonUrl,
+          imageUrls: allUploadedUrls
+        });
+
+        return true;
       } catch (err) {
         statusText.innerHTML = `<span style="color: #f87171; font-weight: 700;">❌ Lỗi: ${err.message}</span>`;
+        alert(`❌ LỖI KHI TẢI LÊN:\n${err.message}`);
+        return false;
       } finally {
         btn.disabled = false;
       }
@@ -1310,16 +1447,52 @@
 
     // Tải tuần tự từng bộ truyện (mỗi bộ vẫn có tiến trình & khung link riêng)
     async function uploadAllMangaSequentially() {
-      const btnAll = document.getElementById("btnUploadAllFolders");
-      if (btnAll) btnAll.disabled = true;
+      // 1. Kiểm tra trước xem có bất kỳ card nào bị trùng Action / Slug không
+      let hasError = false;
+      let errorMsg = "";
+      const currentSlugs = new Set();
 
       let idx = 0;
       for (const [folderName, items] of detectedFolders.entries()) {
-        await uploadSingleMangaFolder(idx, folderName);
+        const mangaSlugInput = document.getElementById(`manga_slug_${idx}`);
+        const slug = cleanSlug(mangaSlugInput ? mangaSlugInput.value : folderName);
+
+        if (existingCdnSlugs.has(slug)) {
+          hasError = true;
+          errorMsg += `\n- Bộ '${folderName}' có slug '${slug}' đã tồn tại trên CDN!`;
+        } else if (currentSlugs.has(slug)) {
+          hasError = true;
+          errorMsg += `\n- Bộ '${folderName}' bị trùng slug '${slug}' với bộ khác trong lượt này!`;
+        }
+        currentSlugs.add(slug);
+        idx++;
+      }
+
+      if (hasError) {
+        alert(`❌ KHÔNG THỂ TẢI HÀNG LOẠT:\nPhát hiện trùng Action / Link có sẵn:${errorMsg}\n\nẢnh thì có thể trùng tên chứ Action tuyệt đối không bao giờ được trùng!\nVui lòng sửa lại các thẻ có viền đỏ/vàng trước khi tải.`);
+        return;
+      }
+
+      const btnAll = document.getElementById("btnUploadAllFolders");
+      if (btnAll) btnAll.disabled = true;
+
+      idx = 0;
+      let successCount = 0;
+      for (const [folderName, items] of detectedFolders.entries()) {
+        const ok = await uploadSingleMangaFolder(idx, folderName);
+        if (ok) successCount++;
         idx++;
       }
 
       if (btnAll) btnAll.disabled = false;
+
+      if (successCount > 0) {
+        playSuccessChime();
+        sendDesktopNotification(
+          "JSONPic CDN: Hoàn Tất Toàn Bộ!",
+          `Đã tải thành công ${successCount}/${detectedFolders.size} bộ truyện lên cdnjsonhentai!`
+        );
+      }
     }
 
     function renderPreviews() {
@@ -1468,6 +1641,120 @@
       document.execCommand("copy");
       alert("✓ Đã copy toàn bộ link ảnh vào bộ nhớ tạm!");
     }
+
+    // ==========================================
+    // 🔔 HỆ THỐNG THÔNG BÁO HOÀN TẤT ĐĂNG TRUYỆN
+    // ==========================================
+    let currentSuccessData = null;
+
+    function playSuccessChime() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        
+        // Note 1 (E5 - 659.25Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(659.25, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start();
+        osc1.stop(ctx.currentTime + 0.3);
+
+        // Note 2 (B5 - 987.77Hz)
+        setTimeout(() => {
+          try {
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = "sine";
+            osc2.frequency.setValueAtTime(987.77, ctx.currentTime);
+            gain2.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start();
+            osc2.stop(ctx.currentTime + 0.5);
+          } catch(e) {}
+        }, 150);
+      } catch(e) {}
+    }
+
+    function sendDesktopNotification(title, body) {
+      try {
+        if ("Notification" in window) {
+          if (Notification.permission === "granted") {
+            new Notification(title, { body });
+          } else if (Notification.permission !== "denied") {
+            Notification.requestPermission().then(permission => {
+              if (permission === "granted") {
+                new Notification(title, { body });
+              }
+            });
+          }
+        }
+      } catch(e) {}
+    }
+
+    function showUploadSuccessModal(info) {
+      currentSuccessData = info;
+      const modal = document.getElementById("uploadSuccessModal");
+      document.getElementById("modalStoryTitle").innerText = info.mangaName;
+      document.getElementById("modalJsonUrl").value = info.jsonUrl;
+      document.getElementById("modalTotalImages").innerText = `${info.totalImages} ảnh`;
+      modal.style.display = "flex";
+    }
+
+    function closeSuccessModal(e) {
+      if (!e || e.target.id === "uploadSuccessModal" || e.target.classList.contains("modal-btn-close")) {
+        document.getElementById("uploadSuccessModal").style.display = "none";
+      }
+    }
+
+    function copyModalJson() {
+      if (currentSuccessData && currentSuccessData.jsonUrl) {
+        navigator.clipboard.writeText(currentSuccessData.jsonUrl);
+        alert("✓ Đã copy link JSON danh sách ảnh!");
+      }
+    }
+
+    function copyModalAllImages() {
+      if (currentSuccessData && currentSuccessData.imageUrls) {
+        navigator.clipboard.writeText(currentSuccessData.imageUrls.join("\n"));
+        alert(`✓ Đã copy toàn bộ ${currentSuccessData.totalImages} link ảnh của bộ truyện!`);
+      }
+    }
   </script>
+
+  <!-- MODAL THÔNG BÁO HOÀN TẤT ĐĂNG TRUYỆN -->
+  <div id="uploadSuccessModal" class="modal-overlay" onclick="closeSuccessModal(event)" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: rgba(13, 22, 41, 0.98); border: 2px solid #34d399; border-radius: 20px; max-width: 520px; width: 100%; padding: 32px 28px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(52, 211, 153, 0.25); animation: popIn 0.3s ease;">
+      <div style="font-size: 3.5rem; margin-bottom: 12px;">🎉</div>
+      <h3 style="font-size: 1.4rem; font-weight: 800; color: #34d399; margin-bottom: 8px;">ĐĂNG TRUYỆN THÀNH CÔNG!</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Đã tải ảnh lên CDN cdnjsonhentai an toàn 100% không bị trùng lặp.</p>
+      
+      <div style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin: 20px 0; text-align: left;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">📖 Tên Bộ Truyện:</div>
+        <div id="modalStoryTitle" style="font-weight: 700; color: #fff; font-size: 1rem; margin-bottom: 10px;"></div>
+        
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">🌐 Link Tra Cứu Toàn Bộ Ảnh (JSON):</div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="text" id="modalJsonUrl" class="form-control mono" readonly style="font-size: 0.85rem; color: #38bdf8; background: #060b14; padding: 8px 12px; flex: 1;">
+          <button type="button" class="btn" style="padding: 8px 12px; font-size: 0.78rem;" onclick="copyModalJson()">📋 Copy</button>
+        </div>
+        
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin: 12px 0 4px;">🖼️ Tổng số ảnh: <strong id="modalTotalImages" style="color: #34d399;">0 ảnh</strong></div>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-secondary" style="padding: 10px 18px;" onclick="copyModalAllImages()">📋 Sao Chép Toàn Bộ Link Ảnh</button>
+        <a href="/client/admin/list" class="btn btn-secondary" style="padding: 10px 18px; text-decoration: none;">📚 Xem Kho Truyện</a>
+        <button type="button" class="btn btn-danger modal-btn-close" style="padding: 10px 18px;" onclick="closeSuccessModal()">✓ Đóng</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
