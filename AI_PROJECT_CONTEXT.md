@@ -96,8 +96,13 @@ Theo yêu cầu của người dùng:
 2. **Quy Chuẩn 1 Domain Duy Nhất (Single CDN Link):**
    * Người dùng không muốn tạo hàng chục site riêng biệt.
    * Tất cả thư mục khi kéo thả (kể cả 3 thư mục độc lập từ máy tính) sẽ cùng đẩy lên site duy nhất `cdnjsonhentai` (`9cfd6ecc-b354-4abd-9c00-9c0659b25ed4`).
-   * Cấu trúc URL trả về luôn là:  
-     `http://cdnjsonhentai.netlify.app/upload/{tên truyện}/từng ảnh 1`
+   * Cấu trúc URL trả về luôn là:
+     - JSON Danh Sách Toàn Bộ Ảnh: `http://cdnjsonhentai.netlify.app/upload/{slug}.json`
+     - Ảnh Trực Tiếp: `http://cdnjsonhentai.netlify.app/upload/{slug}/0001.webp`
+   * **Tự Động Sinh Chuỗi Ký Tự Sạch (Clean Slug Generator):**
+     - Người dùng upload tên truyện có thể chứa ký tự đặc biệt, dấu tiếng Việt hoặc lỗi font Windows-1252/mojibake (`Ch¦¦¦íng`, `D+óm`, nhiều dấu cách liên tiếp). Nếu để nguyên thì link sẽ bị 404 Not Found trên trình duyệt hoặc CDN.
+     - Hệ thống sử dụng hàm `cleanSlug(str)` để tự động chuẩn hóa mọi tên truyện thành chuỗi ký tự sạch không dấu, viết thường, ngăn cách bằng dấu gạch ngang (`a-z0-9-`) (ví dụ: `naruto`, `ai-peak`, `anh-gia-su`).
+     - Trên giao diện `/client/admin`, trường "Chuỗi Slug URL" được tự động điền sẵn và cho phép chỉnh sửa nếu muốn.
    * Tự động batching thành các đợt tối đa 15 ảnh để không bao giờ bị dính lỗi `413 Payload Too Large` của Vercel Serverless (4.5MB limit).
 
 ---

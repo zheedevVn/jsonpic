@@ -1004,6 +1004,15 @@
       return [];
     }
 
+    function cleanSlug(str) {
+      if (!str) return "";
+      let s = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d");
+      s = s.replace(/[^a-zA-Z0-9]+/g, " ").trim().toLowerCase();
+      const words = s.split(/\s+/).filter(w => w.length > 0);
+      const res = words.join("-").slice(0, 35).replace(/-+$/, "");
+      return res || ("manga-" + Math.random().toString(36).substring(2, 7));
+    }
+
     // Hàm nhận diện và bóc tách thông minh các bộ truyện từ danh sách file
     function processScannedFiles(allItems) {
       detectedFolders.clear();
@@ -1127,19 +1136,26 @@
         let index = 0;
         detectedFolders.forEach((items, folderName) => {
           const idx = index++;
+          const autoSlug = cleanSlug(folderName);
           const card = document.createElement("div");
           card.className = "manga-action-card";
           card.style.cssText = "background: rgba(13, 22, 41, 0.85); border: 1px solid rgba(0, 242, 254, 0.25); border-radius: 12px; padding: 16px; margin-bottom: 14px;";
           card.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
               <div style="flex: 1; min-width: 280px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 1.2rem;">📖</span>
-                  <strong style="color: #38bdf8; font-size: 1rem;">Tên Bộ Truyện:</strong>
-                  <input type="text" id="manga_title_${idx}" value="${folderName}" class="form-control" style="font-weight: 700; color: #fff; background: rgba(0,0,0,0.5); padding: 6px 12px; font-size: 0.95rem; flex: 1;" placeholder="" autocomplete="off" spellcheck="false">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                  <span style="font-size: 1.1rem;">📖</span>
+                  <strong style="color: #38bdf8; font-size: 0.9rem; min-width: 120px;">Tên Gốc / Thư Mục:</strong>
+                  <input type="text" id="manga_title_${idx}" value="${folderName}" oninput="const s = cleanSlug(this.value); document.getElementById('manga_slug_${idx}').value = s; document.getElementById('preview_slug_${idx}').innerText = s;" class="form-control" style="font-weight: 600; color: #fff; background: rgba(0,0,0,0.5); padding: 6px 12px; font-size: 0.9rem; flex: 1;" placeholder="" autocomplete="off" spellcheck="false">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span style="font-size: 1.1rem;">🔗</span>
+                  <strong style="color: #34d399; font-size: 0.9rem; min-width: 120px;">Chuỗi Slug URL:</strong>
+                  <input type="text" id="manga_slug_${idx}" value="${autoSlug}" oninput="document.getElementById('preview_slug_${idx}').innerText = cleanSlug(this.value);" class="form-control mono" style="font-weight: 700; color: #a5f3fc; background: rgba(0,0,0,0.7); padding: 6px 12px; font-size: 0.9rem; flex: 1;" placeholder="chuoi-slug-khong-dau" autocomplete="off" spellcheck="false">
                 </div>
                 <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 6px;">
-                  📦 Số lượng: <strong style="color: #34d399;">${items.length} ảnh</strong> | Định dạng lưu: <span class="mono" style="color: #38bdf8;">http://cdnjsonhentai.netlify.app/upload/[Tên Truyện]/từng ảnh</span>
+                  📦 Số lượng: <strong style="color: #34d399;">${items.length} ảnh</strong> | 
+                  🌐 Link Danh Sách JSON: <span class="mono" style="color: #38bdf8;">http://cdnjsonhentai.netlify.app/upload/<span id="preview_slug_${idx}">${autoSlug}</span>.json</span>
                 </div>
               </div>
               <div style="display: flex; gap: 8px;">
@@ -1158,8 +1174,18 @@
 
             <!-- Khung link ảnh kết quả RIÊNG BIỆT của bộ này -->
             <div id="result_manga_${idx}" style="display: none; margin-top: 14px; background: rgba(0,0,0,0.6); padding: 14px; border-radius: 8px; border: 1px solid rgba(52, 211, 153, 0.3);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong style="color: #34d399; font-size: 0.85rem;">✓ Danh Sách Link Ảnh Của Riêng Bộ Này:</strong>
+              <!-- Link JSON hiển thị toàn bộ ảnh -->
+              <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                  <strong style="color: #38bdf8; font-size: 0.85rem;">🌐 Link Danh Sách Toàn Bộ Ảnh (JSON):</strong>
+                  <button type="button" class="btn btn-secondary" id="btn_copy_json_${idx}" style="padding: 4px 10px; font-size: 0.75rem;">📋 Copy Link JSON</button>
+                </div>
+                <input type="text" id="json_link_${idx}" class="form-control mono" readonly style="font-size: 0.85rem; background: #060b14; color: #34d399; font-weight: 700;">
+              </div>
+
+              <!-- Danh sách từng link ảnh -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                <strong style="color: #34d399; font-size: 0.85rem;">✓ Danh Sách Từng Link Ảnh:</strong>
                 <button type="button" class="btn btn-secondary" style="padding: 5px 12px; font-size: 0.75rem;" onclick="copyFolderTextarea('${idx}')">📋 Sao Chép Toàn Bộ Link Bộ Này</button>
               </div>
               <textarea id="textarea_manga_${idx}" class="form-control mono" rows="6" readonly style="font-size: 0.8rem; background: #060b14; color: #a5f3fc; line-height: 1.5;"></textarea>
@@ -1194,8 +1220,11 @@
       const items = detectedFolders.get(originalFolderName);
       if (!items || items.length === 0) return;
 
+      const mangaSlugInput = document.getElementById(`manga_slug_${idx}`);
       const mangaTitleInput = document.getElementById(`manga_title_${idx}`);
-      const mangaTitle = (mangaTitleInput ? mangaTitleInput.value.trim() : originalFolderName) || originalFolderName;
+      const rawSlug = mangaSlugInput ? mangaSlugInput.value.trim() : "";
+      const rawTitle = mangaTitleInput ? mangaTitleInput.value.trim() : "";
+      const finalSlug = cleanSlug(rawSlug || rawTitle || originalFolderName);
 
       const domainsInput = document.getElementById("inputDomains");
       const domains = domainsInput ? domainsInput.value.split(",").map(d => d.trim()).filter(Boolean) : [];
@@ -1205,6 +1234,8 @@
       const progressFill = document.getElementById(`fill_manga_${idx}`);
       const statusText = document.getElementById(`status_manga_${idx}`);
       const resultBox = document.getElementById(`result_manga_${idx}`);
+      const jsonLinkInput = document.getElementById(`json_link_${idx}`);
+      const btnCopyJson = document.getElementById(`btn_copy_json_${idx}`);
       const textarea = document.getElementById(`textarea_manga_${idx}`);
 
       btn.disabled = true;
@@ -1241,7 +1272,7 @@
             body: JSON.stringify({
               siteId: "9cfd6ecc-b354-4abd-9c00-9c0659b25ed4",
               siteUrl: "http://cdnjsonhentai.netlify.app",
-              mangaName: mangaTitle,
+              mangaName: finalSlug,
               chapter: "",
               allowedDomains: domains,
               files: chunkPayload
@@ -1257,9 +1288,17 @@
           }
         }
 
+        const finalJsonUrl = `http://cdnjsonhentai.netlify.app/upload/${finalSlug}.json`;
         progressFill.style.width = "100%";
         statusText.innerHTML = `<span style="color: #34d399; font-weight: 700;">✓ Đã tải thành công ${allUploadedUrls.length} ảnh lên cdnjsonhentai! Độc lập 100%.</span>`;
         resultBox.style.display = "block";
+        if (jsonLinkInput) jsonLinkInput.value = finalJsonUrl;
+        if (btnCopyJson) {
+          btnCopyJson.onclick = () => {
+            navigator.clipboard.writeText(finalJsonUrl);
+            alert("✓ Đã sao chép link JSON: " + finalJsonUrl);
+          };
+        }
         textarea.value = allUploadedUrls.join("\n");
       } catch (err) {
         statusText.innerHTML = `<span style="color: #f87171; font-weight: 700;">❌ Lỗi: ${err.message}</span>`;

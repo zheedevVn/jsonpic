@@ -37,6 +37,15 @@ function sendJson(res, statusCode, data) {
   res.end(JSON.stringify(data, null, 2));
 }
 
+function cleanSlug(str) {
+  if (!str) return "";
+  let s = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d");
+  s = s.replace(/[^a-zA-Z0-9]+/g, " ").trim().toLowerCase();
+  const words = s.split(/\s+/).filter(w => w.length > 0);
+  const res = words.join("-").slice(0, 35).replace(/-+$/, "");
+  return res || ("manga-" + Math.random().toString(36).substring(2, 7));
+}
+
 module.exports = async function handler(req, res) {
   // 1. Chạy tầng phòng thủ WAF (Anti-SQLi, Anti-Dump, Anti-Map/Scanner)
   const waf = checkWAF(req);
@@ -212,15 +221,18 @@ module.exports = async function handler(req, res) {
 
         let targetPath = "";
         if (mangaName) {
-          const cleanManga = mangaName.trim();
-          const cleanChap = chapter ? chapter.trim() : "";
+          const cleanManga = cleanSlug(mangaName);
+          const cleanChap = chapter ? cleanSlug(chapter) : "";
           const folderPrefix = cleanChap ? `${cleanManga}/${cleanChap}` : cleanManga;
           const fileNameOnly = rawPath.split("/").pop();
           targetPath = `upload/${folderPrefix}/${fileNameOnly}`;
         } else if (rawPath.includes("/")) {
-          targetPath = `upload/${rawPath}`;
+          const parts = rawPath.split("/");
+          const fileNameOnly = parts.pop();
+          const cleanFolder = parts.map(cleanSlug).filter(Boolean).join("/");
+          targetPath = `upload/${cleanFolder}/${fileNameOnly}`;
         } else {
-          throw new Error("Lỗi bảo vệ dữ liệu: Bắt buộc phải có Tên Bộ Truyện để lưu ảnh đúng cấu trúc: http://cdnjsonhentai.netlify.app/upload/{tên truyện}/từng ảnh 1. Tuyệt đối không dồn ảnh vào gốc!");
+          throw new Error("Lỗi bảo vệ dữ liệu: Bắt buộc phải có Tên Bộ Truyện để lưu ảnh đúng cấu trúc: http://cdnjsonhentai.netlify.app/upload/{chuỗi ký tự}/từng ảnh 1. Tuyệt đối không dồn ảnh vào gốc!");
         }
 
         return {
@@ -237,6 +249,8 @@ module.exports = async function handler(req, res) {
       });
 
       const imageUrls = formattedFiles.map(f => `${hostUrl}/${f.name}`);
+      const firstTargetFolder = formattedFiles[0]?.name.split("/")[1] || "";
+      const mangaJsonUrl = firstTargetFolder ? `${hostUrl}/upload/${firstTargetFolder}.json` : "";
 
       // Lưu lại lịch sử gần đây
       if (!settings.recentUploads) settings.recentUploads = [];
@@ -246,7 +260,8 @@ module.exports = async function handler(req, res) {
         chapter: chapter || "1",
         count: formattedFiles.length,
         time: new Date().toISOString(),
-        urls: imageUrls
+        urls: imageUrls,
+        jsonUrl: mangaJsonUrl
       });
       if (settings.recentUploads.length > 20) settings.recentUploads.pop();
       saveSettings(settings);
@@ -256,6 +271,7 @@ module.exports = async function handler(req, res) {
         deployId: deployResult.id,
         state: deployResult.state,
         totalImages: imageUrls.length,
+        jsonUrl: mangaJsonUrl,
         allowedIps: allAllowedIps,
         allowedDomains: allAllowedDomains,
         imageUrls
