@@ -275,6 +275,84 @@
       cursor: pointer;
     }
 
+    /* View Switcher */
+    .view-mode-switcher {
+      display: inline-flex;
+      background: rgba(5, 8, 17, 0.9);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .view-mode-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 8px 16px;
+      border-radius: 7px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .view-mode-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .view-mode-btn.active {
+      background: linear-gradient(135deg, #00f2fe, #0ea5e9);
+      color: #050811;
+      box-shadow: 0 2px 10px rgba(0, 242, 254, 0.35);
+    }
+
+    /* JSON Viewer Styling */
+    .json-explorer-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .json-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 16px;
+    }
+
+    .json-pre-container {
+      background: #02040a;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 10px;
+      padding: 20px;
+      max-height: 75vh;
+      overflow: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+      white-space: pre;
+    }
+
+    /* Syntax highlight */
+    .json-key { color: #38bdf8; font-weight: 600; }
+    .json-string { color: #34d399; }
+    .json-number { color: #c084fc; font-weight: 600; }
+    .json-boolean { color: #fbbf24; font-weight: 700; }
+    .json-null { color: #f87171; }
+
     /* STORY CARD (Thẻ Truyện Độc Lập) */
     .story-card {
       background: var(--card-bg);
@@ -713,8 +791,29 @@
         </div>
       </div>
 
-      <!-- Controls & Bộ Lọc -->
-      <div class="controls-bar">
+      <!-- Thanh Chuyển Đổi Chế Độ Xem: Thẻ Trực Quan vs JSON Thuần -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+        <div class="view-mode-switcher">
+          <button type="button" class="view-mode-btn active" id="btnModeCards" onclick="switchViewMode('cards')">
+            <span>🃏</span>
+            <span>Xem Dạng Thẻ Trực Quan</span>
+          </button>
+          <button type="button" class="view-mode-btn" id="btnModeJson" onclick="switchViewMode('json')">
+            <span>⚡</span>
+            <span>Xem Dạng JSON Thuần</span>
+          </button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 0.8rem; color: var(--text-muted);">CDN Catalog API:</span>
+          <a href="http://cdnjsonhentai.netlify.app/upload/catalog.json" target="_blank" class="badge badge-primary mono" style="text-decoration: underline; padding: 5px 10px; font-size: 0.78rem;">
+            /upload/catalog.json
+          </a>
+        </div>
+      </div>
+
+      <!-- Controls & Bộ Lọc (Dùng cho Card View) -->
+      <div class="controls-bar" id="controlsBarBox">
         <div class="search-box">
           <span class="search-icon">🔍</span>
           <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên truyện, slug, chapter hoặc ngày đăng..." oninput="handleFilter()">
@@ -747,8 +846,37 @@
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 6px;">Tự động phân tách từng bộ truyện và từng chapter riêng biệt</p>
       </div>
 
-      <!-- DANH SÁCH THẺ TRUYỆN & CHAPTER -->
+      <!-- DANH SÁCH THẺ TRUYỆN & CHAPTER (CARD VIEW) -->
       <div id="storiesContainer"></div>
+
+      <!-- KHUNG XEM DẠNG JSON THUẦN (PURE JSON EXPLORER) -->
+      <div id="jsonExplorerContainer" style="display: none;" class="json-explorer-card">
+        <div class="json-toolbar">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span style="font-weight: 800; color: #fff; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+              <span>⚡</span> Dữ Liệu JSON Thuần (Raw JSON Catalog)
+            </span>
+            <select id="jsonScopeSelect" class="select-control" onchange="renderPureJsonView()" style="min-width: 220px;">
+              <option value="__all__">Toàn Bộ Danh Mục (Full Catalog)</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn" style="padding: 7px 14px; font-size: 0.8rem;" onclick="copyRawJson()">
+              📋 Sao Chép Toàn Bộ JSON
+            </button>
+            <button type="button" class="btn btn-secondary" style="padding: 7px 14px; font-size: 0.8rem;" onclick="downloadJsonFile()">
+              📥 Tải File .json
+            </button>
+            <a id="btnOpenRawApi" href="/api/admin/list" target="_blank" class="btn btn-secondary" style="padding: 7px 14px; font-size: 0.8rem;">
+              🔗 Mở API Trực Tiếp
+            </a>
+          </div>
+        </div>
+
+        <!-- Khung hiển thị JSON với syntax highlight -->
+        <pre class="json-pre-container" id="jsonPreBox"><code id="jsonCodeBox">Đang tải JSON...</code></pre>
+      </div>
 
     </div>
 
@@ -773,6 +901,8 @@
     let rawStories = [];
     let currentFiltered = [];
     let authToken = localStorage.getItem("admin_token") || "";
+    let fullCatalogData = null;
+    let currentViewMode = "cards"; // "cards" | "json"
 
     // Định dạng ngày giờ chuẩn Việt Nam
     function formatTime(isoString) {
@@ -813,6 +943,130 @@
         document.body.removeChild(ta);
         showToast(successMsg || "✓ Đã sao chép vào bộ nhớ tạm!");
       });
+    }
+
+    // Chuyển đổi giữa chế độ Xem Thẻ và Xem JSON Thuần
+    function switchViewMode(mode) {
+      currentViewMode = mode;
+      const btnCards = document.getElementById("btnModeCards");
+      const btnJson = document.getElementById("btnModeJson");
+      const cardsBox = document.getElementById("storiesContainer");
+      const jsonBox = document.getElementById("jsonExplorerContainer");
+      const controlsBar = document.getElementById("controlsBarBox");
+
+      if (mode === "json") {
+        btnCards.classList.remove("active");
+        btnJson.classList.add("active");
+        cardsBox.style.display = "none";
+        jsonBox.style.display = "block";
+        if (controlsBar) controlsBar.style.display = "none";
+        renderPureJsonView();
+      } else {
+        btnJson.classList.remove("active");
+        btnCards.classList.add("active");
+        jsonBox.style.display = "none";
+        cardsBox.style.display = "block";
+        if (controlsBar) controlsBar.style.display = "flex";
+      }
+    }
+
+    // Cập nhật danh sách bộ truyện trong bộ lọc JSON
+    function updateJsonScopeOptions() {
+      const select = document.getElementById("jsonScopeSelect");
+      if (!select) return;
+      const currentVal = select.value;
+      let html = '<option value="__all__">Toàn Bộ Danh Mục (Full Catalog)</option>';
+      for (const s of rawStories) {
+        html += `<option value="${s.slug}">Truyện: ${s.title} (${s.total_chapters} chap, ${s.total_images} ảnh)</option>`;
+      }
+      select.innerHTML = html;
+      if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+        select.value = currentVal;
+      }
+    }
+
+    // Render JSON thuần với syntax highlighting
+    function renderPureJsonView() {
+      const codeBox = document.getElementById("jsonCodeBox");
+      if (!codeBox || !fullCatalogData) return;
+
+      const scope = document.getElementById("jsonScopeSelect")?.value || "__all__";
+      let displayObj = fullCatalogData;
+
+      if (scope !== "__all__") {
+        const found = (fullCatalogData.stories || []).find(s => s.slug === scope);
+        if (found) displayObj = found;
+      }
+
+      codeBox.innerHTML = syntaxHighlightJson(displayObj);
+    }
+
+    // Syntax Highlighting cho khối JSON
+    function syntaxHighlightJson(jsonObj) {
+      let json = JSON.stringify(jsonObj, null, 2);
+      json = json.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-boolean';
+        } else if (/null/.test(match)) {
+          cls = 'json-null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      });
+    }
+
+    // Sao chép JSON thuần theo scope đang chọn
+    function copyRawJson() {
+      if (!fullCatalogData) return;
+      const scope = document.getElementById("jsonScopeSelect")?.value || "__all__";
+      let dataToCopy = fullCatalogData;
+      if (scope !== "__all__") {
+        const found = (fullCatalogData.stories || []).find(s => s.slug === scope);
+        if (found) dataToCopy = found;
+      }
+      copyText(JSON.stringify(dataToCopy, null, 2), "✓ Đã sao chép dữ liệu JSON thuần vào bộ nhớ tạm!");
+    }
+
+    // Tải file JSON về máy tính
+    function downloadJsonFile() {
+      if (!fullCatalogData) return;
+      const scope = document.getElementById("jsonScopeSelect")?.value || "__all__";
+      let dataToSave = fullCatalogData;
+      let filename = "manga-catalog.json";
+      if (scope !== "__all__") {
+        const found = (fullCatalogData.stories || []).find(s => s.slug === scope);
+        if (found) {
+          dataToSave = found;
+          filename = `${scope}.json`;
+        }
+      }
+      const blob = new Blob([JSON.stringify(dataToSave, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`✓ Đã tải file ${filename}!`);
+    }
+
+    // Bấm xem JSON thuần riêng cho 1 bộ từ Thẻ truyện
+    function viewStoryInJson(slug) {
+      switchViewMode("json");
+      const sel = document.getElementById("jsonScopeSelect");
+      if (sel) {
+        sel.value = slug;
+        renderPureJsonView();
+      }
     }
 
     // Kiểm tra đăng nhập khi mở trang
@@ -884,14 +1138,24 @@
 
         const data = await res.json();
         if (data.status === "success") {
+          fullCatalogData = data;
           rawStories = data.stories || [];
+
+          // Cập nhật link API trực tiếp có kèm token
+          const btnApi = document.getElementById("btnOpenRawApi");
+          if (btnApi) btnApi.href = `/api/admin/list?token=${encodeURIComponent(authToken)}`;
 
           // Cập nhật thống kê
           document.getElementById("statStories").innerText = data.total_stories;
           document.getElementById("statChapters").innerText = data.total_chapters;
           document.getElementById("statImages").innerText = data.total_images.toLocaleString();
 
+          updateJsonScopeOptions();
           handleFilter();
+
+          if (currentViewMode === "json") {
+            renderPureJsonView();
+          }
         } else {
           container.innerHTML = `<div style="text-align: center; padding: 40px; color: #f87171;">❌ Lỗi tải dữ liệu: ${data.message}</div>`;
         }
@@ -925,16 +1189,16 @@
           const matchTitle = (s.title || "").toLowerCase().includes(query);
           const matchSlug = (s.slug || "").toLowerCase().includes(query);
           const matchChap = s.chapters.some(c => (c.chapter_name || "").toLowerCase().includes(query));
-          const matchDate = formatTime(s.created_at).toLowerCase().includes(query);
+          const matchDate = formatTime(s.updated_at || s.created_at).toLowerCase().includes(query);
           return matchTitle || matchSlug || matchChap || matchDate;
         });
       }
 
-      // 3. Sắp xếp
+      // 3. Sắp xếp chuẩn theo thời gian hoặc tên
       if (sortType === "newest") {
-        list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        list.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
       } else if (sortType === "oldest") {
-        list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        list.sort((a, b) => new Date(a.created_at || a.updated_at) - new Date(b.created_at || b.updated_at));
       } else if (sortType === "most_images") {
         list.sort((a, b) => b.total_images - a.total_images);
       } else if (sortType === "title_asc") {
@@ -960,7 +1224,7 @@
       }
 
       container.innerHTML = stories.map((story, sIdx) => {
-        const timeFormatted = formatTime(story.created_at);
+        const timeFormatted = formatTime(story.updated_at || story.created_at);
         const allStoryImages = story.chapters.flatMap(c => c.images);
 
         // Tạo danh sách thẻ từng chapter riêng biệt (Cách ly hoàn toàn trong truyện này)
@@ -1046,8 +1310,11 @@
               </div>
 
               <div class="story-actions">
-                <a href="${story.json_url}" target="_blank" class="btn" style="padding: 7px 14px; font-size: 0.8rem;">
-                  ⚡ Mở Link JSON
+                <button type="button" class="btn" style="padding: 7px 14px; font-size: 0.8rem; background: linear-gradient(135deg, #8b5cf6, #0ea5e9); color: #fff;" onclick="viewStoryInJson('${story.slug}')">
+                  ⚡ Xem JSON Thuần
+                </button>
+                <a href="${story.json_url}" target="_blank" class="btn btn-secondary" style="padding: 7px 14px; font-size: 0.8rem;">
+                  🔗 Mở Link JSON
                 </a>
                 <button type="button" class="btn btn-secondary" style="padding: 7px 14px; font-size: 0.8rem;" onclick="copyText('${story.json_url}', '✓ Đã sao chép link JSON của bộ ${story.title}!')">
                   📋 Copy Link JSON
