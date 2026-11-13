@@ -1092,7 +1092,30 @@
       return res || ("manga-" + Math.random().toString(36).substring(2, 7));
     }
 
+    // Phân tích chuỗi slug thành { storySlug, chapterSlug, chapterName } giống hệt máy chủ
+    function parseFolderSlug(folderName) {
+      const buildName = (num) => {
+        if (num.includes("-")) {
+          const cParts = num.split("-");
+          return `Chương ${cParts[0]} (${cParts.slice(1).join("-")})`;
+        }
+        return `Chương ${num}`;
+      };
+      let m = folderName.match(/^(.+)-(chuong|chap|tap|ch)-(\d+(?:-\d+)*)(?:-([a-z][a-z0-9-]*))?$/i);
+      if (m) {
+        const prefix = m[2].toLowerCase();
+        return { storySlug: m[1], chapterSlug: `${prefix}-${m[3]}`, chapterName: buildName(m[3]), isMulti: true };
+      }
+      m = folderName.match(/^(.+?)-(chuong|chap|tap|ch)$/i);
+      if (m) {
+        const prefix = m[2].toLowerCase();
+        return { storySlug: m[1], chapterSlug: `${prefix}-1`, chapterName: "Chương 1", isMulti: true };
+      }
+      return { storySlug: folderName, chapterSlug: "chap-1", chapterName: "Chương 1", isMulti: false };
+    }
+
     // Hàm nhận diện và bóc tách thông minh các bộ truyện từ danh sách file
+    // Hỗ trợ cả kéo 1 thư mục mẹ chứa nhiều thư mục chapter con (vd: "Sword Art Online/Chương 1/001.webp")
     function processScannedFiles(allItems) {
       detectedFolders.clear();
       selectedFiles = [];
@@ -1116,7 +1139,7 @@
         return;
       }
 
-      // Tìm tiền tố cha chung thừa (như "upload/", "Downloads/a/upload/"...)
+      // Tìm tiền tố cha chung thừa (như "upload/", "Downloads/", "a/"...)
       const dirSplits = validItems.map(it => {
         const parts = it.path.split("/");
         parts.pop(); // bỏ tên file
@@ -1124,11 +1147,13 @@
       });
 
       let prefixLength = 0;
-      if (dirSplits.length > 0 && dirSplits[0].length > 1) {
-        const firstDir = dirSplits[0][0];
-        const allShareFirst = dirSplits.every(dp => dp.length > 1 && dp[0] === firstDir);
-        if (allShareFirst && (firstDir.toLowerCase() === "upload" || firstDir.toLowerCase() === "pictures" || firstDir.toLowerCase() === "downloads" || firstDir.toLowerCase() === "a")) {
-          prefixLength = 1;
+      const GENERIC_PARENTS = new Set(["upload", "pictures", "downloads", "a", "manga", "truyen", "hentai", "new folder", "desktop"]);
+      while (dirSplits.length > 0 && dirSplits.every(dp => dp.length > prefixLength + 1 && dp[prefixLength] === dirSplits[0][prefixLength])) {
+        const dirName = dirSplits[0][prefixLength].toLowerCase().trim();
+        if (GENERIC_PARENTS.has(dirName)) {
+          prefixLength++;
+        } else {
+          break;
         }
       }
 
@@ -1137,8 +1162,33 @@
         const fileName = parts.pop();
         const remainingDirs = parts.slice(prefixLength);
 
-        if (remainingDirs.length > 0) {
-          // Thư mục truyện là thư mục đầu tiên sau khi đã bỏ tiền tố cha thừa
+        if (remainingDirs.length >= 2) {
+          // Trường hợp thư mục mẹ chứa nhiều thư mục chapter con: "Tên Truyện / Chương 1 / 001.webp"
+          // Tự động ghép Tên Truyện + Tên Chapter để đảm bảo cùng 1 bộ truyện gốc!
+          const parentName = remainingDirs[0].trim();
+          const subName = remainingDirs.slice(1).join(" ").trim();
+          const subNorm = subName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          const parentNorm = parentName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+          let combinedTitle = "";
+          if (subNorm.startsWith(parentNorm)) {
+            combinedTitle = subName;
+          } else if (/^(chuong|chap|tap|ch|ep|episode)\b/i.test(subNorm)) {
+            combinedTitle = `${parentName} ${subName}`;
+          } else if (/^\d+(\.\d+)?$/.test(subNorm)) {
+            combinedTitle = `${parentName} Chương ${subName}`;
+          } else {
+            combinedTitle = `${parentName} - ${subName}`;
+          }
+
+          if (!detectedFolders.has(combinedTitle)) {
+            detectedFolders.set(combinedTitle, []);
+          }
+          detectedFolders.get(combinedTitle).push({
+            file: it.file,
+            relativePath: `${combinedTitle}/${fileName}`
+          });
+        } else if (remainingDirs.length === 1) {
           const mangaName = remainingDirs[0];
           if (!detectedFolders.has(mangaName)) {
             detectedFolders.set(mangaName, []);
@@ -1153,7 +1203,7 @@
       });
 
       // Sắp xếp thứ tự ảnh trong mỗi thư mục
-      detectedFolders.forEach((items, folderName) => {
+      detectedFolders.forEach((items) => {
         items.sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true, sensitivity: 'base' }));
       });
 
@@ -1212,6 +1262,15 @@
         btnMainSubmit.style.display = "none";
         document.getElementById("previewContainer").style.display = "none";
 
+        // Đảm bảo có khung xem trước cấu trúc gộp Bộ Truyện & Chapter ở đầu danh sách
+        let structureBox = document.getElementById("storyStructurePreviewBox");
+        if (!structureBox) {
+          structureBox = document.createElement("div");
+          structureBox.id = "storyStructurePreviewBox";
+          structureBox.style.cssText = "margin-bottom: 16px;";
+          listEl.parentNode.insertBefore(structureBox, listEl);
+        }
+
         let index = 0;
         detectedFolders.forEach((items, folderName) => {
           const idx = index++;
@@ -1233,6 +1292,8 @@
                   <strong style="color: #34d399; font-size: 0.9rem; min-width: 120px;">Chuỗi Slug URL:</strong>
                   <input type="text" id="manga_slug_${idx}" value="${autoSlug}" oninput="document.getElementById('preview_slug_${idx}').innerText = cleanSlug(this.value); validateAllActionSlugs();" class="form-control mono" style="font-weight: 700; color: #a5f3fc; background: rgba(0,0,0,0.7); padding: 6px 12px; font-size: 0.9rem; flex: 1;" placeholder="chuoi-slug-khong-dau" autocomplete="off" spellcheck="false">
                 </div>
+                <!-- Dòng hiển thị bộ truyện gốc & chapter mà thư mục này sẽ được xếp vào -->
+                <div id="struct_badge_${idx}" style="margin: 6px 0; font-size: 0.8rem;"></div>
                 <!-- Banner cảnh báo kiểm tra trùng Action / Link -->
                 <div id="slug_warn_${idx}" class="slug-alert-box" style="display: none;"></div>
                 <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 6px;">
@@ -1282,6 +1343,132 @@
         btnMainSubmit.style.display = "flex";
         renderPreviews();
       }
+    }
+
+    // Đồng bộ tất cả các thẻ đang chọn về cùng 1 gốc truyện (khi phát hiện bị tách lệch slug gốc)
+    function unifyAllToStorySlug(targetStorySlug) {
+      const baseSlug = cleanSlug(targetStorySlug);
+      if (!baseSlug) return;
+      const totalCards = detectedFolders.size;
+      for (let i = 0; i < totalCards; i++) {
+        const slugInput = document.getElementById(`manga_slug_${i}`);
+        const previewEl = document.getElementById(`preview_slug_${i}`);
+        if (!slugInput) continue;
+        const curSlug = cleanSlug(slugInput.value.trim());
+        const parsed = parseFolderSlug(curSlug);
+        const chapPart = parsed.isMulti ? parsed.chapterSlug : `chuong-${i + 1}`;
+        const newSlug = `${baseSlug}-${chapPart}`;
+        slugInput.value = newSlug;
+        if (previewEl) previewEl.innerText = newSlug;
+      }
+      validateAllActionSlugs();
+    }
+
+    // Hiển thị bảng Xem Trước Cấu Trúc Truyện & Chapter trước khi bấm tải
+    function renderStoryStructurePreview() {
+      const box = document.getElementById("storyStructurePreviewBox");
+      if (!box) return;
+      const totalCards = detectedFolders.size;
+      if (totalCards === 0) {
+        box.innerHTML = "";
+        return;
+      }
+
+      const groups = new Map(); // storySlug -> [ { idx, fullSlug, chapterSlug, chapterName, imgCount } ]
+      let idx = 0;
+      detectedFolders.forEach((items, folderName) => {
+        const i = idx++;
+        const slugInput = document.getElementById(`manga_slug_${i}`);
+        const fullSlug = cleanSlug(slugInput ? slugInput.value.trim() : folderName);
+        const parsed = parseFolderSlug(fullSlug);
+
+        if (!groups.has(parsed.storySlug)) groups.set(parsed.storySlug, []);
+        groups.get(parsed.storySlug).push({
+          idx: i,
+          fullSlug,
+          chapterSlug: parsed.chapterSlug,
+          chapterName: parsed.chapterName,
+          imgCount: items.length
+        });
+
+        const badgeEl = document.getElementById(`struct_badge_${i}`);
+        if (badgeEl) {
+          badgeEl.innerHTML = `
+            <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(139, 92, 246, 0.14); border: 1px solid rgba(139, 92, 246, 0.35); color: #e9d5ff; padding: 3px 10px; border-radius: 6px;">
+              🗂️ Sẽ gộp vào bộ: <strong class="mono" style="color: #38bdf8;">${parsed.storySlug}</strong>
+              <span>→</span>
+              <strong style="color: #34d399;">${parsed.chapterName}</strong>
+              <span class="mono" style="opacity: 0.75;">(${parsed.chapterSlug})</span>
+            </span>
+          `;
+        }
+      });
+
+      const isSplitWarning = totalCards > 1 && groups.size > 1;
+      const firstStorySlug = groups.keys().next().value || "";
+
+      let groupsHtml = "";
+      for (const [storySlug, chaps] of groups.entries()) {
+        const totalImgs = chaps.reduce((s, c) => s + c.imgCount, 0);
+        const chapsPills = chaps.map(c => `
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(6, 11, 20, 0.75); border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem;">
+            <div>
+              <strong style="color: #c084fc;">📑 ${c.chapterName}</strong>
+              <span class="mono" style="color: #94a3b8; margin-left: 6px;">/upload/${c.fullSlug}/</span>
+            </div>
+            <span style="color: #34d399; font-weight: 700;">${c.imgCount} ảnh</span>
+          </div>
+        `).join("");
+
+        groupsHtml += `
+          <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid ${isSplitWarning ? "rgba(251, 191, 36, 0.45)" : "rgba(52, 211, 153, 0.35)"}; border-radius: 10px; padding: 12px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 1rem;">📚</span>
+                <span style="color: #e2e8f0; font-size: 0.85rem;">Bộ truyện gốc:</span>
+                <strong class="mono" style="color: #38bdf8; font-size: 0.95rem;">${storySlug}</strong>
+                <span style="background: rgba(52, 211, 153, 0.15); color: #34d399; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;">${chaps.length} chapter • ${totalImgs} ảnh</span>
+              </div>
+              <div class="mono" style="font-size: 0.75rem; color: #94a3b8;">
+                JSON gộp cả bộ: <span style="color: #38bdf8;">/upload/${storySlug}.json</span>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px;">
+              ${chapsPills}
+            </div>
+          </div>
+        `;
+      }
+
+      box.innerHTML = `
+        <div style="background: rgba(6, 11, 20, 0.85); border: 1px solid ${isSplitWarning ? "#fbbf24" : "rgba(56, 189, 248, 0.35)"}; border-radius: 12px; padding: 14px 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+            <div>
+              <strong style="color: ${isSplitWarning ? "#fbbf24" : "#38bdf8"}; font-size: 0.95rem;">
+                ${isSplitWarning
+                  ? `⚠️ CẢNH BÁO: ${totalCards} thư mục đang bị tách thành ${groups.size} bộ truyện khác nhau!`
+                  : `✅ XEM TRƯỚC CẤU TRÚC GỘP CHAPTER (${groups.size} bộ truyện • ${totalCards} chapter)`}
+              </strong>
+              <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                ${isSplitWarning
+                  ? "Nếu đây là các chapter của CÙNG 1 BỘ TRUYỆN, hãy bấm nút Đồng Bộ bên phải để gom chung về 1 link gốc trước khi tải!"
+                  : "Tất cả chapter bên dưới có cùng tiền tố slug nên sẽ tự động gộp chung vào 1 thẻ truyện trên Kho Truyện."}
+              </div>
+            </div>
+            ${isSplitWarning ? `
+              <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="unifyBaseSlugInput" value="${firstStorySlug}" class="form-control mono" style="width: 210px; padding: 5px 10px; font-size: 0.8rem; background: #060b14; color: #38bdf8;" placeholder="slug-bo-truyen-goc">
+                <button type="button" class="btn" style="padding: 6px 12px; font-size: 0.78rem; background: linear-gradient(135deg, #f59e0b, #eab308); color: #060913; font-weight: 800;" onclick="unifyAllToStorySlug(document.getElementById('unifyBaseSlugInput').value)">
+                  🔗 Gom Tất Cả Về Cùng 1 Bộ Này
+                </button>
+              </div>
+            ` : ""}
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${groupsHtml}
+          </div>
+        </div>
+      `;
     }
 
     // Kiểm tra và cảnh báo trùng Action / Slug trong thời gian thực
@@ -1336,6 +1523,8 @@
           }
         }
       }
+
+      renderStoryStructurePreview();
     }
 
     function removeDetectedFolder(folderName) {
@@ -1348,7 +1537,7 @@
       if (textarea) {
         textarea.select();
         document.execCommand("copy");
-        alert("✓ Đã copy toàn bộ link của bộ truyện này vào bộ nhớ tạm!");
+        showSideToast({ title: "Đã sao chép!", message: "Đã copy toàn bộ link của bộ truyện này vào bộ nhớ tạm." });
       }
     }
 
@@ -1365,7 +1554,11 @@
 
       // 1. Kiểm tra chặn trùng Action / Link ngay tại client
       if (existingCdnSlugs.has(finalSlug)) {
-        alert(`❌ LỖI TRÙNG ACTION / LINK CÓ SẴN!\n\nThư mục 'upload/${finalSlug}' đã tồn tại trên CDN cdnjsonhentai!\nẢnh thì có thể trùng tên chứ cái Action tuyệt đối không bao giờ được trùng.\n\nVui lòng đổi lại Tên Truyện hoặc Chuỗi Slug khác trước khi tải lên!`);
+        showSideToast({
+          type: "error",
+          title: "Trùng Action / Link có sẵn!",
+          message: `Thư mục upload/${finalSlug} đã tồn tại trên CDN. Vui lòng đổi Chuỗi Slug khác!`
+        });
         if (mangaSlugInput) {
           mangaSlugInput.focus();
           mangaSlugInput.select();
@@ -1430,7 +1623,7 @@
         if (btnCopyJson) {
           btnCopyJson.onclick = () => {
             navigator.clipboard.writeText(finalJsonUrl);
-            alert("✓ Đã sao chép link JSON: " + finalJsonUrl);
+            showSideToast({ title: "Đã sao chép JSON!", message: finalJsonUrl });
           };
         }
         textarea.value = allUploadedUrls.join("\n");
@@ -1439,7 +1632,7 @@
         existingCdnSlugs.add(finalSlug);
         validateAllActionSlugs();
 
-        // 🔔 THÔNG BÁO HOÀN TẤT ĐĂNG TRUYỆN CHO NGƯỜI DÙNG BIẾT
+        // 🔔 THÔNG BÁO GỌN Ở GÓC PHẢI MÀN HÌNH (TỰ TẮT SAU 5 GIÂY, KHÔNG CHE MÀN HÌNH)
         playSuccessChime();
         sendDesktopNotification(
           "JSONPic CDN: Tải Lên Thành Công!",
@@ -1456,7 +1649,7 @@
         return true;
       } catch (err) {
         statusText.innerHTML = `<span style="color: #f87171; font-weight: 700;">❌ Lỗi: ${err.message}</span>`;
-        alert(`❌ LỖI KHI TẢI LÊN:\n${err.message}`);
+        showSideToast({ type: "error", title: "Lỗi khi tải lên", message: err.message });
         return false;
       } finally {
         btn.disabled = false;
@@ -1714,14 +1907,12 @@
       const textarea = document.getElementById("resultTextarea");
       textarea.select();
       document.execCommand("copy");
-      alert("✓ Đã copy toàn bộ link ảnh vào bộ nhớ tạm!");
+      showSideToast({ title: "Đã sao chép!", message: "Đã copy toàn bộ link ảnh vào bộ nhớ tạm." });
     }
 
     // ==========================================
-    // 🔔 HỆ THỐNG THÔNG BÁO HOÀN TẤT ĐĂNG TRUYỆN
+    // 🔔 HỆ THỐNG THÔNG BÁO NỔI BÊN GÓC MÀN HÌNH (5 GIÂY, KHÔNG CHE GIAO DIỆN)
     // ==========================================
-    let currentSuccessData = null;
-
     function playSuccessChime() {
       try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1774,62 +1965,106 @@
       } catch(e) {}
     }
 
+    // Hiển thị thông báo nhỏ gọn bên góc phải (tự đóng sau 5 giây, không khóa màn hình)
+    function showSideToast({ type = "success", title = "", message = "", jsonUrl = "", imageUrls = null, duration = 5000 }) {
+      const container = document.getElementById("sideToastContainer");
+      if (!container) return;
+
+      const isErr = type === "error";
+      const borderCol = isErr ? "#f87171" : "#34d399";
+      const icon = isErr ? "❌" : "🎉";
+
+      const toast = document.createElement("div");
+      toast.style.cssText = `
+        pointer-events: auto;
+        background: rgba(13, 22, 41, 0.96);
+        border: 1px solid ${borderCol};
+        border-left: 4px solid ${borderCol};
+        border-radius: 12px;
+        padding: 12px 14px;
+        width: 360px;
+        max-width: calc(100vw - 32px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.65);
+        color: #fff;
+        font-size: 0.82rem;
+        position: relative;
+        overflow: hidden;
+        animation: slideInRight 0.25s ease;
+      `;
+
+      toast.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; color: ${borderCol}; font-size: 0.9rem;">
+            <span>${icon}</span>
+            <span>${title}</span>
+          </div>
+          <button type="button" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0 4px;" onclick="this.closest('.side-toast-item').remove()">×</button>
+        </div>
+        <div style="color: #e2e8f0; margin-top: 5px; line-height: 1.4; word-break: break-word;">${message}</div>
+        ${jsonUrl ? `
+          <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary btn-copy-json" style="padding: 4px 9px; font-size: 0.72rem;">📋 Copy JSON</button>
+            ${imageUrls && imageUrls.length ? `<button type="button" class="btn btn-secondary btn-copy-imgs" style="padding: 4px 9px; font-size: 0.72rem;">📋 Copy ${imageUrls.length} Link Ảnh</button>` : ""}
+            <a href="/client/admin/list" target="_blank" class="btn btn-secondary" style="padding: 4px 9px; font-size: 0.72rem; text-decoration: none;">📚 Kho Truyện</a>
+          </div>
+        ` : ""}
+        <div style="position: absolute; bottom: 0; left: 0; height: 3px; width: 100%; background: ${borderCol}; opacity: 0.7; transition: width ${duration}ms linear;" class="toast-timer-bar"></div>
+      `;
+      toast.classList.add("side-toast-item");
+
+      const btnJson = toast.querySelector(".btn-copy-json");
+      if (btnJson && jsonUrl) {
+        btnJson.onclick = () => {
+          navigator.clipboard.writeText(jsonUrl);
+          btnJson.innerText = "✓ Đã Copy JSON";
+        };
+      }
+      const btnImgs = toast.querySelector(".btn-copy-imgs");
+      if (btnImgs && imageUrls) {
+        btnImgs.onclick = () => {
+          navigator.clipboard.writeText(imageUrls.join("\n"));
+          btnImgs.innerText = "✓ Đã Copy Link";
+        };
+      }
+
+      container.appendChild(toast);
+      // Giữ tối đa 4 thông báo trên góc để không bị dài
+      while (container.children.length > 4) {
+        container.firstElementChild.remove();
+      }
+
+      requestAnimationFrame(() => {
+        const bar = toast.querySelector(".toast-timer-bar");
+        if (bar) bar.style.width = "0%";
+      });
+
+      setTimeout(() => {
+        if (toast.parentNode) toast.remove();
+      }, duration);
+    }
+
     function showUploadSuccessModal(info) {
-      currentSuccessData = info;
-      const modal = document.getElementById("uploadSuccessModal");
-      document.getElementById("modalStoryTitle").innerText = info.mangaName;
-      document.getElementById("modalJsonUrl").value = info.jsonUrl;
-      document.getElementById("modalTotalImages").innerText = `${info.totalImages} ảnh`;
-      modal.style.display = "flex";
-    }
-
-    function closeSuccessModal(e) {
-      if (!e || e.target.id === "uploadSuccessModal" || e.target.classList.contains("modal-btn-close")) {
-        document.getElementById("uploadSuccessModal").style.display = "none";
-      }
-    }
-
-    function copyModalJson() {
-      if (currentSuccessData && currentSuccessData.jsonUrl) {
-        navigator.clipboard.writeText(currentSuccessData.jsonUrl);
-        alert("✓ Đã copy link JSON danh sách ảnh!");
-      }
-    }
-
-    function copyModalAllImages() {
-      if (currentSuccessData && currentSuccessData.imageUrls) {
-        navigator.clipboard.writeText(currentSuccessData.imageUrls.join("\n"));
-        alert(`✓ Đã copy toàn bộ ${currentSuccessData.totalImages} link ảnh của bộ truyện!`);
-      }
+      const parsed = parseFolderSlug(info.slug || "");
+      showSideToast({
+        type: "success",
+        title: "Đăng truyện thành công!",
+        message: `<strong>${info.mangaName}</strong> (${info.totalImages} ảnh) → Bộ <code style="color:#38bdf8">${parsed.storySlug}</code> • ${parsed.chapterName}`,
+        jsonUrl: info.jsonUrl,
+        imageUrls: info.imageUrls,
+        duration: 5000
+      });
     }
   </script>
 
-  <!-- MODAL THÔNG BÁO HOÀN TẤT ĐĂNG TRUYỆN -->
-  <div id="uploadSuccessModal" class="modal-overlay" onclick="closeSuccessModal(event)" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
-    <div style="background: rgba(13, 22, 41, 0.98); border: 2px solid #34d399; border-radius: 20px; max-width: 520px; width: 100%; padding: 32px 28px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(52, 211, 153, 0.25); animation: popIn 0.3s ease;">
-      <div style="font-size: 3.5rem; margin-bottom: 12px;">🎉</div>
-      <h3 style="font-size: 1.4rem; font-weight: 800; color: #34d399; margin-bottom: 8px;">ĐĂNG TRUYỆN THÀNH CÔNG!</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem;">Đã tải ảnh lên CDN cdnjsonhentai an toàn 100% không bị trùng lặp.</p>
-      
-      <div style="background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin: 20px 0; text-align: left;">
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">📖 Tên Bộ Truyện:</div>
-        <div id="modalStoryTitle" style="font-weight: 700; color: #fff; font-size: 1rem; margin-bottom: 10px;"></div>
-        
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">🌐 Link Tra Cứu Toàn Bộ Ảnh (JSON):</div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="text" id="modalJsonUrl" class="form-control mono" readonly style="font-size: 0.85rem; color: #38bdf8; background: #060b14; padding: 8px 12px; flex: 1;">
-          <button type="button" class="btn" style="padding: 8px 12px; font-size: 0.78rem;" onclick="copyModalJson()">📋 Copy</button>
-        </div>
-        
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin: 12px 0 4px;">🖼️ Tổng số ảnh: <strong id="modalTotalImages" style="color: #34d399;">0 ảnh</strong></div>
-      </div>
+  <style>
+    @keyframes slideInRight {
+      from { transform: translateX(40px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
 
-      <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-        <button type="button" class="btn btn-secondary" style="padding: 10px 18px;" onclick="copyModalAllImages()">📋 Sao Chép Toàn Bộ Link Ảnh</button>
-        <a href="/client/admin/list" class="btn btn-secondary" style="padding: 10px 18px; text-decoration: none;">📚 Xem Kho Truyện</a>
-        <button type="button" class="btn btn-danger modal-btn-close" style="padding: 10px 18px;" onclick="closeSuccessModal()">✓ Đóng</button>
-      </div>
-    </div>
-  </div>
+  <!-- KHUNG THÔNG BÁO NỔI BÊN GÓC PHẢI (KHÔNG CHE MÀN HÌNH, TỰ TẮT SAU 5 GIÂY) -->
+  <div id="sideToastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;"></div>
 </body>
 </html>
+
