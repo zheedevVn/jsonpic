@@ -1391,24 +1391,13 @@
       statusText.innerText = `⏳ Đang chuẩn bị và mã hóa ${items.length} trang ảnh...`;
 
       try {
-        const BATCH_SIZE = 15;
         let allUploadedUrls = [];
+        const fileList = items.map(it => it.file);
 
-        for (let i = 0; i < items.length; i += BATCH_SIZE) {
-          const chunk = items.slice(i, i + BATCH_SIZE);
-          const chunkPayload = [];
-
-          statusText.innerText = `⏳ Đang tải ảnh (${i + 1} - ${Math.min(i + BATCH_SIZE, items.length)} / ${items.length}) lên cdnjsonhentai...`;
+        for await (const batch of buildSizedBatches(fileList)) {
+          const i = batch.start;
+          statusText.innerText = `⏳ Đang tải ảnh (${i + 1} - ${batch.end} / ${items.length}) lên cdnjsonhentai...`;
           progressFill.style.width = `${Math.round(((i + 1) / items.length) * 85)}%`;
-
-          for (const it of chunk) {
-            const b64 = await fileToBase64(it.file);
-            chunkPayload.push({
-              name: it.file.name,
-              relativePath: it.file.name,
-              base64: b64
-            });
-          }
 
           const res = await fetch("/api/admin/upload", {
             method: "POST",
@@ -1423,14 +1412,11 @@
               chapter: "",
               allowedDomains: domains,
               isFirstChunk: (i === 0),
-              files: chunkPayload
+              files: batch.files
             })
           });
 
-          const data = await res.json();
-          if (!res.ok || data.status !== "success") {
-            throw new Error(data.message || "Tải lên thất bại");
-          }
+          const data = await readUploadResponse(res);
           if (data.imageUrls) {
             allUploadedUrls = allUploadedUrls.concat(data.imageUrls);
           }
@@ -1579,6 +1565,72 @@
       });
     }
 
+    // Vercel giới hạn body mỗi request ~4.5MB => giữ mỗi lượt gửi dưới ~3.2MB base64 cho an toàn
+    const MAX_BATCH_B64 = 3.2 * 1024 * 1024;
+    const MAX_BATCH_FILES = 15;
+
+    // Nén lại 1 ảnh quá nặng bằng canvas (WebP), giảm dần chất lượng/kích thước tới khi vừa giới hạn
+    async function compressImageToFit(file, maxB64) {
+      const bitmap = await createImageBitmap(file);
+      let scale = 1;
+      let quality = 0.9;
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/webp", quality);
+        const b64 = dataUrl.split(",")[1];
+        if (b64.length <= maxB64) return b64;
+        if (quality > 0.6) quality -= 0.1; else scale *= 0.85;
+      }
+      throw new Error(`Ảnh ${file.name} quá nặng, không thể nén xuống dưới giới hạn tải lên`);
+    }
+
+    // Chuẩn bị payload cho 1 file (tự nén nếu 1 ảnh đơn lẻ vượt giới hạn request)
+    async function prepareFilePayload(file) {
+      let b64 = await fileToBase64(file);
+      let name = file.name;
+      if (b64.length > MAX_BATCH_B64) {
+        b64 = await compressImageToFit(file, MAX_BATCH_B64);
+        name = name.replace(/\.[^.\/]+$/, "") + ".webp";
+      }
+      return { name, relativePath: name, base64: b64 };
+    }
+
+    // Chia danh sách file thành các lượt gửi theo dung lượng thực tế (không vượt giới hạn Vercel)
+    async function* buildSizedBatches(fileList) {
+      let batch = [];
+      let size = 0;
+      let start = 0;
+      for (let i = 0; i < fileList.length; i++) {
+        const p = await prepareFilePayload(fileList[i]);
+        if (batch.length > 0 && (size + p.base64.length > MAX_BATCH_B64 || batch.length >= MAX_BATCH_FILES)) {
+          yield { start, end: i, files: batch };
+          batch = [];
+          size = 0;
+          start = i;
+        }
+        batch.push(p);
+        size += p.base64.length;
+      }
+      if (batch.length > 0) yield { start, end: fileList.length, files: batch };
+    }
+
+    // Đọc phản hồi an toàn (server có thể trả text thuần như "Request Entity Too Large")
+    async function readUploadResponse(res) {
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch (e) {
+        if (res.status === 413) throw new Error("Dung lượng gửi lên quá lớn (413). Vui lòng thử lại.");
+        throw new Error(`Máy chủ trả về lỗi ${res.status}: ${text.slice(0, 120)}`);
+      }
+      if (!res.ok || data.status !== "success") {
+        throw new Error(data.message || `Tải lên thất bại (${res.status})`);
+      }
+      return data;
+    }
+
     // Submit upload manga khi chọn file ảnh lẻ (BẮT BUỘC NHẬP TÊN TRUYỆN)
     async function handleUploadManga(e) {
       e.preventDefault();
@@ -1610,24 +1662,12 @@
       progressFill.style.width = "10%";
 
       try {
-        const BATCH_SIZE = 15;
         let allUploadedUrls = [];
 
-        for (let i = 0; i < selectedFiles.length; i += BATCH_SIZE) {
-          const chunk = selectedFiles.slice(i, i + BATCH_SIZE);
-          const chunkPayload = [];
-
-          btn.innerText = `⏳ Đang tải ảnh (${i + 1} - ${Math.min(i + BATCH_SIZE, selectedFiles.length)} / ${selectedFiles.length})...`;
+        for await (const batch of buildSizedBatches(selectedFiles)) {
+          const i = batch.start;
+          btn.innerText = `⏳ Đang tải ảnh (${i + 1} - ${batch.end} / ${selectedFiles.length})...`;
           progressFill.style.width = `${Math.round(((i + 1) / selectedFiles.length) * 85)}%`;
-
-          for (const f of chunk) {
-            const b64 = await fileToBase64(f);
-            chunkPayload.push({
-              name: f.name,
-              relativePath: f.name,
-              base64: b64
-            });
-          }
 
           const res = await fetch("/api/admin/upload", {
             method: "POST",
@@ -1641,14 +1681,11 @@
               mangaName,
               chapter,
               allowedDomains: domains,
-              files: chunkPayload
+              files: batch.files
             })
           });
 
-          const data = await res.json();
-          if (!res.ok || data.status !== "success") {
-            throw new Error(data.message || "Tải lên thất bại");
-          }
+          const data = await readUploadResponse(res);
           if (data.imageUrls) {
             allUploadedUrls = allUploadedUrls.concat(data.imageUrls);
           }
