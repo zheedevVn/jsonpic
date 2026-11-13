@@ -1565,9 +1565,9 @@
       });
     }
 
-    // Vercel giới hạn body mỗi request ~4.5MB => giữ mỗi lượt gửi dưới ~3.2MB base64 cho an toàn
-    const MAX_BATCH_B64 = 3.2 * 1024 * 1024;
-    const MAX_BATCH_FILES = 15;
+    // Vercel giới hạn body mỗi request ~4.5MB => giữ mỗi lượt gửi dưới ~3.3MB base64 (tối đa 35 ảnh nhỏ/lượt)
+    const MAX_BATCH_B64 = 3.3 * 1024 * 1024;
+    const MAX_BATCH_FILES = 35;
 
     // Nén lại 1 ảnh quá nặng bằng canvas (WebP), giảm dần chất lượng/kích thước tới khi vừa giới hạn
     async function compressImageToFit(file, maxB64) {
@@ -1598,21 +1598,27 @@
       return { name, relativePath: name, base64: b64 };
     }
 
-    // Chia danh sách file thành các lượt gửi theo dung lượng thực tế (không vượt giới hạn Vercel)
+    // Đọc đa luồng (10 ảnh cùng lúc) và chia thành các lượt gửi theo dung lượng thực tế
     async function* buildSizedBatches(fileList) {
       let batch = [];
       let size = 0;
       let start = 0;
-      for (let i = 0; i < fileList.length; i++) {
-        const p = await prepareFilePayload(fileList[i]);
-        if (batch.length > 0 && (size + p.base64.length > MAX_BATCH_B64 || batch.length >= MAX_BATCH_FILES)) {
-          yield { start, end: i, files: batch };
-          batch = [];
-          size = 0;
-          start = i;
+      const READ_CONCURRENCY = 10;
+      for (let offset = 0; offset < fileList.length; offset += READ_CONCURRENCY) {
+        const slice = fileList.slice(offset, offset + READ_CONCURRENCY);
+        const prepared = await Promise.all(slice.map(prepareFilePayload));
+        for (let j = 0; j < prepared.length; j++) {
+          const i = offset + j;
+          const p = prepared[j];
+          if (batch.length > 0 && (size + p.base64.length > MAX_BATCH_B64 || batch.length >= MAX_BATCH_FILES)) {
+            yield { start, end: i, files: batch };
+            batch = [];
+            size = 0;
+            start = i;
+          }
+          batch.push(p);
+          size += p.base64.length;
         }
-        batch.push(p);
-        size += p.base64.length;
       }
       if (batch.length > 0) yield { start, end: fileList.length, files: batch };
     }
